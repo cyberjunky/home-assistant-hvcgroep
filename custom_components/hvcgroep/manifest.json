@@ -1,0 +1,9 @@
+{
+  "domain": "hvcgroep",
+  "name": "HVCGroep",
+  "documentation": "https://github.com/cyberjunky/home-assistant-hvcgroep",
+  "dependencies": [],
+  "codeowners": [
+    "@cyberjunky"
+  ],
+}
