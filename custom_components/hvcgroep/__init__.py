@@ -1,1 +1,1 @@
-"""The HVCGroep component."""
+"""The HVC Groep Sensor component."""
