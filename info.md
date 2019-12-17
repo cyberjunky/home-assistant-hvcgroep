@@ -93,7 +93,7 @@ Thing to fix/add is multiple pickups per day for 'today' and 'tomorrow' sensor.
 
 ### Screenshots
 
-![alt text](https://https://github.com/cyberjunky/home-assistant-hvcgroep/blob/master/screenshots/hvcgroep.png?raw=true "Screenshot HVCGroep")
+![alt text](https://github.com/cyberjunky/home-assistant-hvcgroep/blob/master/screenshots/hvcgroep.png?raw=true "Screenshot HVCGroep")
 
 ### Changes
 * first release for hacs
