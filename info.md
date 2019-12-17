@@ -89,7 +89,6 @@ Afval Ophaaldagen:
   - sensor.afval_vandaag
   - sensor.afval_morgen
 ```
-Thing to fix/add is multiple pickups per day for 'today' and 'tomorrow' sensor.
 
 ### Screenshots
 
@@ -97,6 +96,9 @@ Thing to fix/add is multiple pickups per day for 'today' and 'tomorrow' sensor.
 
 ### Changes
 * first release for hacs
+
+### TODO
+* fix/add multiple pickups per day for 'today' and 'tomorrow' sensor.
 
 ### Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
