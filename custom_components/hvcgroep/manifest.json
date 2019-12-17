@@ -1,9 +1,10 @@
 {
   "domain": "hvcgroep",
-  "name": "HVCGroep",
+  "name": "HVCGroep Sensor",
   "documentation": "https://github.com/cyberjunky/home-assistant-hvcgroep",
+  "requirements": [],
   "dependencies": [],
   "codeowners": [
     "@cyberjunky"
-  ],
+  ]
 }
