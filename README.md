@@ -8,6 +8,13 @@ This is a Custom Component for Home-Assistant (https://home-assistant.io)
 
 ### Installation
 
+## HACS - Recommended
+- Have [HACS](https://hacs.xyz) installed, this will allow you to easily update.
+- Add `https://github.com/cyberjunky/home-assistant-hvcgroep` as a [custom repository](https://hacs.xyz/docs/navigation/repository) with Type: Integration
+- Click Install under "HVCGroep" integration.
+- Restart Home-Assistant.
+
+## Manual
 - Copy directory `custom_components/hvcgroep` to your `<config dir>/custom_components` directory.
 - Configure with config below.
 - Restart Home-Assistant.
