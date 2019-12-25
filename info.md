@@ -1,17 +1,14 @@
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
+[![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/custom-components/hacs) [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
 
 # HVC Groep Sensor Component
-This component fetches garbage pickup dates for parts of The Netherlands using HVC Groep's REST API.
-
-## Home-Assistant Custom Component
-This is a Custom Component for Home-Assistant (https://home-assistant.io)
+This is a Custom Component for Home-Assistant (https://home-assistant.io), fetches garbage pickup dates for parts of The Netherlands using HVC Groep's REST API.
 
 {% if not installed %}
 
 ### Installation
 
-- Copy directory `custom_components/hvcgroep` to your `<config dir>/custom_components` directory.
-- Configure with config below.
+- Install this integration using HACS.
+- Configure using configuration instructions below.
 - Restart Home-Assistant.
 
 {% endif %}
@@ -93,9 +90,6 @@ Afval Ophaaldagen:
 ### Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-hvcgroep/blob/master/screenshots/hvcgroep.png?raw=true "Screenshot HVCGroep")
-
-### Changes
-* first release for hacs
 
 ### TODO
 * fix/add multiple pickups per day for 'today' and 'tomorrow' sensor.
