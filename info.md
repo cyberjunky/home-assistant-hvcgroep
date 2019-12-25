@@ -5,7 +5,7 @@ This is a Custom Component for Home-Assistant (https://home-assistant.io), fetch
 
 {% if not installed %}
 
-### Installation
+## Installation
 
 - Install this integration using HACS.
 - Configure using configuration instructions below.
@@ -13,7 +13,7 @@ This is a Custom Component for Home-Assistant (https://home-assistant.io), fetch
 
 {% endif %}
 
-### Usage
+## Usage
 To use this component in your installation, add the following to your `configuration.yaml` file:
 
 ```yaml
@@ -87,12 +87,12 @@ Afval Ophaaldagen:
   - sensor.afval_morgen
 ```
 
-### Screenshots
+## Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-hvcgroep/blob/master/screenshots/hvcgroep.png?raw=true "Screenshot HVCGroep")
 
-### TODO
+## TODO
 * fix/add multiple pickups per day for 'today' and 'tomorrow' sensor.
 
-### Donation
+## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
