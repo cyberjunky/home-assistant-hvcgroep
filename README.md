@@ -18,7 +18,7 @@ This is a Custom Component for Home-Assistant (https://home-assistant.io), it fe
 - Configure with config below.
 - Restart Home-Assistant.
 
-### Usage
+## Usage
 To use this component in your installation, add the following to your `configuration.yaml` file:
 
 ```yaml
@@ -93,12 +93,12 @@ Afval Ophaaldagen:
 ```
 Thing to fix/add is multiple pickups per day for 'today' and 'tomorrow' sensor.
 
-### Screenshots
+## Screenshots
 
 ![alt text](https://github.com/cyberjunky/home-assistant-hvcgroep/blob/master/screenshots/hvcgroep.png?raw=true "Screenshot HVCGroep")
 
-### TODO
+## TODO
 * fix/add multiple pickups per day for 'today' and 'tomorrow' sensor.
 
-### Donation
+## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
