@@ -10,7 +10,7 @@ This is a Custom Component for Home-Assistant (https://home-assistant.io), it fe
 - Have [HACS](https://hacs.xyz) installed, this will allow you to easily manage and track updates.
 - Search for 'HVCGroep'.
 - Click Install below the found integration.
-- Configure using the configuration instuctions below.
+- Configure using the configuration instructions below.
 - Restart Home-Assistant.
 
 ### Manual
