@@ -1,5 +1,5 @@
 """
-Support for reading trash pickup data for HVC groep.
+Support for reading trash pickup dates for HVC groep areas.
 
 configuration.yaml
 
@@ -13,36 +13,35 @@ sensor:
       - papier
       - restafval
 """
-
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.entity import Entity
-from homeassistant.components.sensor import PLATFORM_SCHEMA
-from homeassistant.const import (CONF_NAME, CONF_SCAN_INTERVAL, CONF_RESOURCES)
-from homeassistant.util import Throttle
-
-import voluptuous as vol
+import logging
 from datetime import timedelta
 from datetime import datetime
-
 import requests
-import json
-import logging
+import voluptuous as vol
 
+import homeassistant.helpers.config_validation as cv
+from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.const import (
+    CONF_NAME, CONF_SCAN_INTERVAL, CONF_RESOURCES
+    )
+from homeassistant.helpers.entity import Entity
+from homeassistant.util import Throttle
+
+BAGID_URL = 'https://apps.hvcgroep.nl/rest/adressen/{0}-{1}'
+WASTE_URL = 'https://apps.hvcgroep.nl/rest/adressen/{0}/afvalstromen'
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
-#timedelta(hours=1)
+MIN_TIME_BETWEEN_UPDATES = timedelta(hours=1)
 
 DEFAULT_NAME = 'HVC Groep'
-ICON = 'mdi:delete-empty'
 CONST_POSTCODE = "postcode"
 CONST_HUISNUMMER = "huisnummer"
 
 # Predefined types and id's
 TRASH_TYPES = {
-    'gft': [5, 'Groene Bak GFT', 'mdi:delete-empty'],
-    'plastic': [6, 'Plastic en Verpakking', 'mdi:delete-empty'],
-    'papier': [3, 'Blauwe Bak Papier', 'mdi:delete-empty'],
+    'gft': [5, 'Groene Bak GFT', 'mdi:food-apple-outline'],
+    'plastic': [6, 'Plastic en Verpakking', 'mdi:recycle'],
+    'papier': [3, 'Blauwe Bak Papier', 'mdi:file'],
     'restafval': [2, 'Grijze Bak Restafval', 'mdi:delete-empty'],
 }
 
@@ -50,95 +49,117 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
     vol.Required(CONST_POSTCODE): cv.string,
     vol.Required(CONST_HUISNUMMER): cv.string,
-    vol.Required(CONF_RESOURCES, default=[]):
+    vol.Required(CONF_RESOURCES, default=list(TRASH_TYPES)):
         vol.All(cv.ensure_list, [vol.In(TRASH_TYPES)]),
 })
 
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Setup the HVCGroep sensors."""
+
     scan_interval = config.get(CONF_SCAN_INTERVAL)
     postcode = config.get(CONST_POSTCODE)
     huisnummer = config.get(CONST_HUISNUMMER)
-    name = config.get(CONF_NAME)
+    default_name = config.get(CONF_NAME)
 
+    data = TrashData(postcode, huisnummer)
     try:
-        data = TrashData(postcode, huisnummer)
-    except requests.exceptions.HTTPError as error:
-        _LOGGER.error(error)
-        return False
+        await data.async_update()
+    except ValueError as err:
+        _LOGGER.error("Error while fetching data from HVCGroep: %s", err)
+        return
 
     entities = []
     for resource in config[CONF_RESOURCES]:
         trash_type = resource.lower()
-        
-        entities.append(TrashSensor(data, name, trash_type))
-    add_entities(entities, True)
+        name = default_name + "_" + trash_type
+        id = TRASH_TYPES[resource][0]
+        icon = TRASH_TYPES[resource][2]
+
+        _LOGGER.debug("Adding HVCGroep sensor: {}, {}, {}, {}".format(trash_type, name, id, icon))
+        entities.append(TrashSensor(data, trash_type, name, id, icon))
+
+    async_add_entities(entities, True)
 
 
 # pylint: disable=abstract-method
 class TrashData(object):
-    """Fetch data from HVCGroep API."""
+    """Handle HVCGroep object and limit updates."""
 
     def __init__(self, postcode, huisnummer):
         """Initialize."""
         self._postcode = postcode
         self._huisnummer = huisnummer
-        self._bagId = None
-        self.data = None
-        trashschedule = []
+        self._bagid = None
+        self._data = None
 
-        """Get the bagId using the postcode and huisnummer."""
+        """Get the bagid using postcode and huisnummer."""
         try:
-            json_data = requests.get(("https://apps.hvcgroep.nl/rest/adressen/{0}-{1}").format(self._postcode, self._huisnummer), timeout=5).json()
-            _LOGGER.debug("Get bagId data = %s", json_data)
-            self._bagId = json_data[0]["bagId"]
-            _LOGGER.debug("Parsed bagId = %s", self._bagId)
-        except requests.exceptions.RequestException:
-            _LOGGER.error("Cannot fetch the bagId %s.", err.args)
-            self.data = None
-            return False
+            json_data = requests.get(self._build_bagid_url(), timeout=5).json()
+            self._bagid = json_data[0]["bagId"]
+            _LOGGER.debug("Found BagId = %s", self._bagid)
+        except (requests.exceptions.RequestException) as error:
+            _LOGGER.error("Unable to get BagId from HVCGroep: %s", error)
+    
+    def _build_bagid_url(self):
+        """Build the URL for the requests."""
+        url = BAGID_URL.format(self._postcode, self._huisnummer)
+        _LOGGER.debug("Bagid fetch URL: %s", url)
+        return url
 
+    def _build_waste_url(self):
+        """Build the URL for the requests."""
+        url = WASTE_URL.format(self._bagid)
+        _LOGGER.debug("Waste fetch URL: %s", url)
+        return url
+
+    @property
+    def latest_data(self):
+        """Return the latest data object."""
+        if self._data:
+            return self._data
+        return None
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    def update(self):
+    async def async_update(self):
         """Get the afvalstromen data."""
         trashschedule = []
         try:
-            json_data = requests.get(("https://apps.hvcgroep.nl/rest/adressen/{0}/afvalstromen").format(self._bagId), timeout=5).json()
-            _LOGGER.debug("Get afvalstromen data = %s", json_data)
+            json_data = requests.get(self._build_waste_url(), timeout=5).json()
+            _LOGGER.debug("Afvalstromen fetched data = %s", json_data)
         except requests.exceptions.RequestException:
-            _LOGGER.error("Cannot fetch afvalstromen %s.", err.args)
-            self.data = None
+            _LOGGER.error("Unable to get afvalstromen data from HVCGroep: %s", error)
+            self._data = None
             return False
 
         """Parse the afvalstromen data."""
         try:
             for afval in json_data:
-               if afval['ophaaldatum'] != None:
-                  _LOGGER.debug(" Afvalstromen id: %s Type: %s Datum: %s", afval['id'], afval['title'], afval['ophaaldatum'])
-                  trash = {}
-                  trash['id'] = afval['id']
-                  trash['title'] = afval['title']
-                  trash['date'] = datetime.strptime(afval['ophaaldatum'], '%Y-%m-%d')
-                  trashschedule.append(trash)
-            self.data = trashschedule
+                if afval['ophaaldatum'] != None:
+                    _LOGGER.debug("Afvalstromen id: %s Type: %s Datum: %s", afval['id'], afval['title'], afval['ophaaldatum'])
+                    trash = {}
+                    trash['id'] = afval['id']
+                    trash['title'] = afval['title']
+                    trash['date'] = datetime.strptime(afval['ophaaldatum'], '%Y-%m-%d')
+                    trashschedule.append(trash)
+            self._data = trashschedule
         except ValueError as err:
-            _LOGGER.error("Cannot parse the bagId %s", err.args)
-            self.data = None
+            _LOGGER.error("Cannot parse the afvalstomen data %s", err.args)
+            self._data = None
             return False
 
 
 class TrashSensor(Entity):
-    """Representation of a Sensor."""
+    """Representation of a HVCGroep Sensor."""
 
-    def __init__(self, data, name, trash_type):
+    def __init__(self, data, trash_type, name, id, icon):
         """Initialize the sensor."""
-        self.data = data
+        self._data = data
         self._trash_type = trash_type
-        self._name = name + "_" + self._trash_type
-        self._id =  TRASH_TYPES[self._trash_type][0]
-        self._icon = TRASH_TYPES[self._trash_type][2]
+        self._name = name
+        self._id =  id
+        self._icon = icon
+
         self._day = None
         self._state = None
 
@@ -164,25 +185,32 @@ class TrashSensor(Entity):
             "day": self._day,
         }
 
-    def update(self):
-        """Fetch new state data for the sensor."""
-        self.data.update()
-        _LOGGER.debug("Update = %s", self.data.data)
+    async def async_update(self):
+        """Get the latest data and use it to update our sensor state."""
 
+        await self._data.async_update()
+        if not self._data:
+            _LOGGER.error("Didn't receive data from TOON")
+            return
+
+        trashdata = self._data.latest_data
         today = datetime.today()
-        for d in self.data.data:
-           pickupdate = d['date']
-           datediff = (pickupdate - today).days + 1
-           if d['id'] == self._id:
-              if datediff > 1:
-                 self._state = pickupdate.strftime('%d-%m-%Y')
-                 self._day = None
-              elif datediff == 1:
-                 self._state = pickupdate.strftime('Morgen %d-%m-%Y')
-                 self._day = "Morgen"
-              elif datediff <= 0:
-                 self._state = pickupdate.strftime('Vandaag %d-%m-%Y')
-                 self._day = "Vandaag"
-              else:
-                 self._state = None
-                 self._day = None
+
+        for d in trashdata:
+            pickupdate = d['date']
+            datediff = (pickupdate - today).days + 1
+            if d['id'] == self._id:
+                if datediff > 1:
+                    self._state = pickupdate.strftime('%d-%m-%Y')
+                    self._day = None
+                elif datediff == 1:
+                    self._state = pickupdate.strftime('Morgen %d-%m-%Y')
+                    self._day = "Morgen"
+                elif datediff <= 0:
+                    self._state = pickupdate.strftime('Vandaag %d-%m-%Y')
+                    self._day = "Vandaag"
+                else:
+                    self._state = None
+                    self._day = None
+
+        _LOGGER.debug("Device id: {} State: {}".format(self._id, self._state))
