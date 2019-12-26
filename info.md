@@ -3,16 +3,6 @@
 # HVC Groep Sensor Component
 This is a Custom Component for Home-Assistant (https://home-assistant.io), fetches garbage pickup dates for parts of The Netherlands using HVC Groep's REST API.
 
-{% if not installed %}
-
-## Installation
-
-- Install this integration using HACS.
-- Configure using configuration instructions below.
-- Restart Home-Assistant.
-
-{% endif %}
-
 ## Usage
 To use this component in your installation, add the following to your `configuration.yaml` file:
 
