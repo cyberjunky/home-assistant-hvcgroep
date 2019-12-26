@@ -97,8 +97,5 @@ Thing to fix/add is multiple pickups per day for 'today' and 'tomorrow' sensor.
 
 ![alt text](https://github.com/cyberjunky/home-assistant-hvcgroep/blob/master/screenshots/hvcgroep.png?raw=true "Screenshot HVCGroep")
 
-## TODO
-* fix/add multiple pickups per day for 'today' and 'tomorrow' sensor.
-
 ## Donation
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
