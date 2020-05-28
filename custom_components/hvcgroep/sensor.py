@@ -66,22 +66,24 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     huisnummer = config.get(CONST_HUISNUMMER)
     default_name = config.get(CONF_NAME)
 
-    trashdata = TrashData(hass, postcode, huisnummer)
+    session = async_get_clientsession(hass)
+
+    data = TrashData(session, postcode, huisnummer)
     try:
-        await trashdata.async_update()
+        await data.async_update()
     except ValueError as err:
         _LOGGER.error("Error while fetching data from HVCGroep: %s", err)
         return
 
     entities = []
     for resource in config[CONF_RESOURCES]:
-        trash_type = resource.lower()
-        name = default_name + "_" + trash_type
+        sensor_type = resource.lower()
+        name = default_name + "_" + sensor_type
         id = TRASH_TYPES[resource][0]
         icon = TRASH_TYPES[resource][2]
 
-        _LOGGER.debug("Adding HVCGroep sensor: {}, {}, {}, {}".format(name, trash_type, id, icon))
-        entities.append(TrashSensor(trashdata, name, trash_type, id, icon))
+        _LOGGER.debug("Adding HVCGroep sensor: {}, {}, {}".format(name, id, icon))
+        entities.append(TrashSensor(data, name, id, icon))
 
     async_add_entities(entities, True)
 
@@ -90,31 +92,34 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
 class TrashData(object):
     """Handle HVCGroep object and limit updates."""
 
-    def __init__(self, hass, postcode, huisnummer):
+    def __init__(self, session, postcode, huisnummer):
         """Initialize."""
-        self._hass = hass
+
+        self._session = session
         self._postcode = postcode
         self._huisnummer = huisnummer
         self._bagid = None
         self._data = None
 
-
     async def _get_bagid(self):
-
         """Get the bagid using postcode and huisnummer."""
+
         try:
-            websession = async_get_clientsession(self._hass)
             with async_timeout.timeout(5):
-                response = await websession.get(self._build_bagid_url())
+                response = await self._session.get(self._build_bagid_url())
             _LOGGER.debug(
                 "Response status from HVC bagid: %s", response.status
-            ) 
-        except (asyncio.TimeoutError, aiohttp.ClientError) as err:
-            _LOGGER.error("Cannot connect to HVC for bagid: %s", err)
+            )
+        except aiohttp.ClientError:
+            _LOGGER.error("Cannot connect to HVC for bagid")
+            self._data = None
+            return
+        except asyncio.TimeoutError:
+            _LOGGER.error("Timeout occured while trying to get bagid from HVC")
             self._data = None
             return
         except Exception as err:
-            _LOGGER.error("Error downloading bagid from HVC: %s", err)
+            _LOGGER.error("Unknown error occured while trying to get bagid from HVC: %s", err)
             self._data = None
             return
 
@@ -127,13 +132,6 @@ class TrashData(object):
             _LOGGER.error("Cannot parse data from HVC: %s", err)
             self._data = None
             return
-
-        # try:
-        #     json_data = requests.get(self._build_bagid_url(), timeout=5).json()
-        #     self._bagid = json_data[0]["bagId"]
-        #     _LOGGER.debug("Found BagId = %s", self._bagid)
-        # except (requests.exceptions.RequestException) as error:
-        #     _LOGGER.error("Unable to get BagId from HVCGroep: %s", error)
 
     def _build_bagid_url(self):
         """Build the URL for the requests."""
@@ -162,18 +160,21 @@ class TrashData(object):
 
         trashschedule = []
         try:
-            websession = async_get_clientsession(self._hass)
             with async_timeout.timeout(5):
-                response = await websession.get(self._build_waste_url())
+                response = await self._session.get(self._build_waste_url())
             _LOGGER.debug(
                 "Response status from HVC: %s", response.status
-            ) 
-        except (asyncio.TimeoutError, aiohttp.ClientError) as err:
-            _LOGGER.error("Cannot connect to HVC: %s", err)
+            )
+        except aiohttp.ClientError:
+            _LOGGER.error("Cannot connect to HVC")
+            self._data = None
+            return
+        except asyncio.TimeoutError:
+            _LOGGER.error("Timeout occured while trying to connect to HVC")
             self._data = None
             return
         except Exception as err:
-            _LOGGER.error("Error downloading bagid from HVC: %s", err)
+            _LOGGER.error("Unknown error occured while downloading data from HVC: %s", err)
             self._data = None
             return
 
@@ -205,11 +206,10 @@ class TrashData(object):
 class TrashSensor(Entity):
     """Representation of a HVCGroep Sensor."""
 
-    def __init__(self, trashdata, name, trash_type, id, icon):
+    def __init__(self, data, name, id, icon):
         """Initialize the sensor."""
-        self._trashdata = trashdata
+        self._data = data
         self._name = name
-        self._trash_type = trash_type
         self._id =  id
         self._icon = icon
 
@@ -241,13 +241,13 @@ class TrashSensor(Entity):
     async def async_update(self):
         """Get the latest data and use it to update our sensor state."""
 
-        await self._trashdata.async_update()
-        trashdata = self._trashdata.latest_data
+        await self._data.async_update()
+        trash = self._data.latest_data
 
         today = datetime.today()
 
-        if trashdata:
-            for d in trashdata:
+        if trash:
+            for d in trash:
                 pickupdate = d['date']
                 datediff = (pickupdate - today).days + 1
                 if d['id'] == self._id:
