@@ -42,7 +42,10 @@ Configuration variables:
 - **resources** (*Required*): This section tells the component which types of garbage to get pickup dates for.
 
 You can create 2 extra sensors which hold the type of garbage to pickup today and tomorrow:
-```
+```yaml
+# Example configuration.yaml entry
+
+sensor:
   - platform: template
     sensors:
       afval_vandaag:
@@ -69,20 +72,23 @@ You can create 2 extra sensors which hold the type of garbage to pickup today an
         value_template: >-
           {% if is_state_attr('sensor.hvc_groep_gft', 'day', 'Morgen') %}
           {% set gft = 'Groene Bak' %}
-          {% elif is_state_attr('sensor.hvc_groep_papier', 'day', 'Morgen') %}
+          {% endif %}
+          {% if is_state_attr('sensor.hvc_groep_papier', 'day', 'Morgen') %}
           {% set papier = 'Blauwe Bak' %}
+          {% endif %}
           {% if is_state_attr('sensor.hvc_groep_plastic', 'day', 'Morgen') %}
           {% set plastic = 'Plastic' %}
           {% endif %}
           {% if is_state_attr('sensor.hvc_groep_restafval', 'day', 'Morgen') %}
-          {% endif %}
           {% set restafval = 'Grijze Bak' %}
           {% endif %}
              {{gft}} {{papier}} {{plastic}} {{restafval}}
 ```
 
 And you can group them like so:
-```
+```yaml
+# Example groups.yaml entry
+
 Afval Ophaaldagen:
   - sensor.hvc_groep_gft
   - sensor.hvc_groep_papier
