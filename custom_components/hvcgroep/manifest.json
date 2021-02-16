@@ -1,7 +1,9 @@
 {
   "domain": "hvcgroep",
   "name": "HVCGroep Sensor",
+  "version": "1.0.6",
   "documentation": "https://github.com/cyberjunky/home-assistant-hvcgroep",
+  "issue_tracker": "https://github.com/cyberjunky/home-assistant-hvcgroep/issues",
   "requirements": [],
   "dependencies": [],
   "codeowners": [
