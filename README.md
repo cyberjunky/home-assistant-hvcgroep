@@ -111,7 +111,7 @@ Add the relevant lines below to the `configuration.yaml`:
 logger:
   default: info
   logs:
-    homeassistant.components.hvcgroep: debug
+    custom_components.hvcgroep: debug
 ```
 
 ## Donation
