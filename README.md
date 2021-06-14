@@ -46,43 +46,79 @@ You can create 2 extra sensors which hold the type of garbage to pickup today an
 # Example configuration.yaml entry
 
 sensor:
+
   - platform: template
     sensors:
       afval_vandaag:
-        friendly_name: 'Vandaag'
+        friendly_name: "Vandaag"
         value_template: >-
+          {% set afval = '' %}
           {% if is_state_attr('sensor.hvc_groep_gft', 'day', 'Vandaag') %}
-          {% set gft = 'Groene Bak' %}
+          {% set afval = 'Groene Bak' %}
           {% endif %}
           {% if is_state_attr('sensor.hvc_groep_papier', 'day', 'Vandaag') %}
-          {% set papier = 'Blauwe Bak' %}
+            {% if afval|length %}
+              {% set afval = afval + ' + Blauwe Bak' %}
+            {% else %}
+              {% set afval = 'Blauwe Bak' %}
+            {% endif %}
           {% endif %}
           {% if is_state_attr('sensor.hvc_groep_plastic', 'day', 'Vandaag') %}
-          {% set plastic = 'Plastic' %}
+            {% if afval|length %}
+              {% set afval = afval + ' + Plastic' %}
+            {% else %}
+              {% set afval = 'Plastic' %}
+            {% endif %}
           {% endif %}
           {% if is_state_attr('sensor.hvc_groep_restafval', 'day', 'Vandaag') %}
-          {% set restafval = 'Grijze Bak' %}
+            {% if afval|length %}
+              {% set afval = afval + ' + Grijze Bak' %}
+            {% else %}
+              {% set afval = 'Grijze Bak' %}
+            {% endif %}
           {% endif %}
-             {{gft}} {{papier}} {{plastic}} {{restafval}}
+          {% if afval|length %}
+            {{afval}}
+          {% else %}
+            Geen
+          {% endif %}
 
   - platform: template
     sensors:
       afval_morgen:
-        friendly_name: 'Morgen'
+        friendly_name: "Morgen"
         value_template: >-
+          {% set afval = '' %}
           {% if is_state_attr('sensor.hvc_groep_gft', 'day', 'Morgen') %}
-          {% set gft = 'Groene Bak' %}
+          {% set afval = 'Groene Bak' %}
           {% endif %}
           {% if is_state_attr('sensor.hvc_groep_papier', 'day', 'Morgen') %}
-          {% set papier = 'Blauwe Bak' %}
+            {% if afval|length %}
+              {% set afval = afval + ' + Blauwe Bak' %}
+            {% else %}
+              {% set afval = 'Blauwe Bak' %}
+            {% endif %}
           {% endif %}
           {% if is_state_attr('sensor.hvc_groep_plastic', 'day', 'Morgen') %}
-          {% set plastic = 'Plastic' %}
+            {% if afval|length %}
+              {% set afval = afval + ' + Plastic' %}
+            {% else %}
+              {% set afval = 'Plastic' %}
+            {% endif %}
           {% endif %}
           {% if is_state_attr('sensor.hvc_groep_restafval', 'day', 'Morgen') %}
-          {% set restafval = 'Grijze Bak' %}
+            {% if afval|length %}
+              {% set afval = afval + ' + Grijze Bak' %}
+            {% else %}
+              {% set afval = 'Grijze Bak' %}
+            {% endif %}
           {% endif %}
-             {{gft}} {{papier}} {{plastic}} {{restafval}}
+          {% if afval|length %}
+            {{afval}}
+          {% else %}
+            Geen
+          {% endif %}
+
 ```
 
 And you can group them like so:
