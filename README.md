@@ -33,6 +33,7 @@ sensor:
       - plastic
       - papier
       - restafval
+      - reiniging
 ```
 
 Configuration variables:
@@ -130,6 +131,7 @@ Afval Ophaaldagen:
   - sensor.hvc_groep_papier
   - sensor.hvc_groep_plastic
   - sensor.hvc_groep_restafval
+  - sensor.hvc_groep_reiniging
   - sensor.afval_vandaag
   - sensor.afval_morgen
 ```
