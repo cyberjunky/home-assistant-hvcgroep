@@ -12,6 +12,7 @@ sensor:
         - plastic
         - papier
         - restafval
+        - reiniging
 """
 import logging
 from datetime import timedelta
@@ -47,6 +48,7 @@ TRASH_TYPES = {
     'plastic': [6, 'Plastic en Verpakking', 'mdi:recycle'],
     'papier': [3, 'Blauwe Bak Papier', 'mdi:file'],
     'restafval': [2, 'Grijze Bak Restafval', 'mdi:delete-empty'],
+    'reiniging': [59, 'Reiniging', 'mdi:liquid-spot'],
 }
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
