@@ -18,6 +18,7 @@ import logging
 from datetime import timedelta
 from datetime import datetime
 import voluptuous as vol
+from typing import Final
 
 import aiohttp
 import asyncio
@@ -25,7 +26,11 @@ import async_timeout
 
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.components.sensor import PLATFORM_SCHEMA
+from homeassistant.components.sensor import (
+    PLATFORM_SCHEMA,
+    SensorEntity,
+    SensorEntityDescription
+)
 from homeassistant.const import (
     CONF_NAME, CONF_SCAN_INTERVAL, CONF_RESOURCES
     )
@@ -38,25 +43,52 @@ _LOGGER = logging.getLogger(__name__)
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=1)
 
-DEFAULT_NAME = 'HVC Groep'
+SENSOR_PREFIX = 'HVC Groep'
 CONST_POSTCODE = "postcode"
 CONST_HUISNUMMER = "huisnummer"
 
-# Predefined types and id's
-TRASH_TYPES = {
-    'gft': [5, 'Groene Bak GFT', 'mdi:food-apple-outline'],
-    'plastic': [6, 'Plastic en Verpakking', 'mdi:recycle'],
-    'papier': [3, 'Blauwe Bak Papier', 'mdi:file'],
-    'restafval': [2, 'Grijze Bak Restafval', 'mdi:delete-empty'],
-    'reiniging': [59, 'Reiniging', 'mdi:liquid-spot'],
+SENSOR_LIST = {
+    "gft": 5,
+    "plastic": 6,
+    "papier": 3,
+    "restafval": 2,
+    "reiniging": 59
 }
 
+SENSOR_TYPES: Final[tuple[SensorEntityDescription, ...]] = (
+    SensorEntityDescription(
+        key="gft",
+        name="Groene Bak GFT",
+        icon="mdi:food-apple-outline"
+    ),
+    SensorEntityDescription(
+        key="plastic",
+        name="Plastic en Verpakking",
+        icon="mdi:recycle"
+    ),
+    SensorEntityDescription(
+        key="papier",
+        name="Blauwe Bak Papier",
+        icon="mdi:file"
+    ),
+    SensorEntityDescription(
+        key="restafval",
+        name="Grijze Bak Restafval",
+        icon="mdi:delete-empty"
+    ),
+    SensorEntityDescription(
+        key="reiniging",
+        name="Reiniging",
+        icon="mdi:liquid-spot"
+    )
+)
+
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+    vol.Optional(CONF_NAME, default=SENSOR_PREFIX): cv.string,
     vol.Required(CONST_POSTCODE): cv.string,
     vol.Required(CONST_HUISNUMMER): cv.string,
-    vol.Required(CONF_RESOURCES, default=list(TRASH_TYPES)):
-        vol.All(cv.ensure_list, [vol.In(TRASH_TYPES)]),
+    vol.Required(CONF_RESOURCES, default=list(SENSOR_LIST)):
+        vol.All(cv.ensure_list, [vol.In(SENSOR_LIST)]),
 })
 
 
@@ -78,14 +110,10 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         return
 
     entities = []
-    for resource in config[CONF_RESOURCES]:
-        sensor_type = resource.lower()
-        name = default_name + "_" + sensor_type
-        id = TRASH_TYPES[resource][0]
-        icon = TRASH_TYPES[resource][2]
-
-        _LOGGER.debug("Adding HVCGroep sensor: {}, {}, {}".format(name, id, icon))
-        entities.append(TrashSensor(data, name, id, icon))
+    for description in SENSOR_TYPES:
+        if description.key in config[CONF_RESOURCES]:
+            sensor = TrashSensor(description, data)
+            entities.append(sensor)
 
     async_add_entities(entities, True)
 
@@ -208,30 +236,27 @@ class TrashData(object):
 class TrashSensor(Entity):
     """Representation of a HVCGroep Sensor."""
 
-    def __init__(self, data, name, id, icon):
+    def __init__(self, description, data):
         """Initialize the sensor."""
+        self.entity_description = description
         self._data = data
-        self._name = name
-        self._id =  id
-        self._icon = icon
 
+        self._id =  SENSOR_LIST[description.key]
         self._day = None
         self._state = None
 
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
+        self._type = self.entity_description.key
+        self._attr_icon = self.entity_description.icon
+        self._attr_name = SENSOR_PREFIX + " " + self.entity_description.name
+        self._attr_unique_id = f"{SENSOR_PREFIX} {self._id}"
+
+        self._discovery = False
+        self._dev_id = {}
 
     @property
     def state(self):
         """Return the state of the sensor."""
         return self._state
-
-    @property
-    def icon(self):
-        """Icon to use in the frontend, if any."""
-        return self._icon
 
     @property
     def extra_state_attributes(self):
@@ -266,4 +291,4 @@ class TrashSensor(Entity):
                         self._state = None
                         self._day = None
 
-            _LOGGER.debug("Device: {} State: {}".format(self._name, self._state))
+            _LOGGER.debug("Device: {} State: {}".format(self._attr_name, self._state))
