@@ -13,6 +13,9 @@ sensor:
         - papier
         - restafval
         - reiniging
+        date_format_default: '%d-%m-%Y'
+        date_format_today: 'Vandaag %d-%m-%Y'
+        date_format_tomorrow: 'Morgen %d-%m-%Y'
 """
 import logging
 from datetime import timedelta
@@ -46,6 +49,9 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(hours=1)
 SENSOR_PREFIX = 'HVC Groep'
 CONST_POSTCODE = "postcode"
 CONST_HUISNUMMER = "huisnummer"
+CONF_FORMAT_DEFAULT = 'date_format_default'
+CONF_FORMAT_TODAY = 'date_format_today'
+CONF_FORMAT_TOMORROW = 'date_format_tomorrow'
 
 SENSOR_LIST = {
     "gft": 5,
@@ -89,6 +95,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONST_HUISNUMMER): cv.string,
     vol.Required(CONF_RESOURCES, default=list(SENSOR_LIST)):
         vol.All(cv.ensure_list, [vol.In(SENSOR_LIST)]),
+    vol.Optional(CONF_FORMAT_DEFAULT, default='%d-%m-%Y'): cv.string,
+    vol.Optional(CONF_FORMAT_TODAY, default='Vandaag %d-%m-%Y'): cv.string,
+    vol.Optional(CONF_FORMAT_TOMORROW, default='Morgen %d-%m-%Y'): cv.string,
 })
 
 
@@ -99,6 +108,11 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     postcode = config.get(CONST_POSTCODE)
     huisnummer = config.get(CONST_HUISNUMMER)
     default_name = config.get(CONF_NAME)
+    date_formats = {
+        'default': config.get(CONF_FORMAT_DEFAULT),
+        'today': config.get(CONF_FORMAT_TODAY),
+        'tomorrow': config.get(CONF_FORMAT_TOMORROW)
+    }
 
     session = async_get_clientsession(hass)
 
@@ -112,7 +126,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     entities = []
     for description in SENSOR_TYPES:
         if description.key in config[CONF_RESOURCES]:
-            sensor = TrashSensor(description, data)
+            sensor = TrashSensor(description, data, date_formats)
             entities.append(sensor)
 
     async_add_entities(entities, True)
@@ -236,10 +250,12 @@ class TrashData(object):
 class TrashSensor(Entity):
     """Representation of a HVCGroep Sensor."""
 
-    def __init__(self, description, data):
+    def __init__(self, description, data, date_formats):
         """Initialize the sensor."""
         self.entity_description = description
         self._data = data
+        
+        self._date_formats = date_formats
 
         self._id =  SENSOR_LIST[description.key]
         self._day = None
@@ -263,6 +279,7 @@ class TrashSensor(Entity):
         """Return the state attributes of this device."""
         return {
             "day": self._day,
+            "datediff": self._datediff
         }
 
     async def async_update(self):
@@ -278,14 +295,15 @@ class TrashSensor(Entity):
                 pickupdate = d['date']
                 datediff = (pickupdate - today).days + 1
                 if d['id'] == self._id:
+                    self._datediff = datediff
                     if datediff > 1:
-                        self._state = pickupdate.strftime('%d-%m-%Y')
+                        self._state = pickupdate.strftime(self._date_formats['default'])
                         self._day = None
                     elif datediff == 1:
-                        self._state = pickupdate.strftime('Morgen %d-%m-%Y')
+                        self._state = pickupdate.strftime(self._date_formats['tomorrow'])
                         self._day = "Morgen"
                     elif datediff <= 0:
-                        self._state = pickupdate.strftime('Vandaag %d-%m-%Y')
+                        self._state = pickupdate.strftime(self._date_formats['today'])
                         self._day = "Vandaag"
                     else:
                         self._state = None
