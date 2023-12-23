@@ -144,6 +144,36 @@ Afval Ophaaldagen:
   - sensor.afval_vandaag
   - sensor.afval_morgen
 ```
+
+If you need to monitor more than one address you can create a config with names in them:
+```
+  - platform: hvcgroep
+    name: Adres1
+    postcode: 4321ZZ
+    huisnummer: 1
+    resources:
+      - gft
+      - plastic
+      - papier
+      - restafval
+    date_format_default: "%Y-%m-%d"
+    date_format_tomorrow: "Morgen %Y-%m-%d"
+    date_format_today: "Vandaag %Y-%m-%d"
+
+  - platform: hvcgroep
+    name: Adres2
+    postcode: 1234AA
+    huisnummer: 3
+    resources:
+      - gft
+      - plastic
+      - papier
+      - restafval
+    date_format_default: "%Y-%m-%d"
+    date_format_tomorrow: "Morgen %Y-%m-%d"
+    date_format_today: "Vandaag %Y-%m-%d"
+```
+
 Thing to fix/add is multiple pickups per day for 'today' and 'tomorrow' sensor.
 
 ## Screenshots
