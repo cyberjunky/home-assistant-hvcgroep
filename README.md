@@ -34,6 +34,9 @@ sensor:
       - papier
       - restafval
       - reiniging
+    date_format_default: '%d-%m-%Y'
+    date_format_tomorrow: 'Morgen %d-%m-%Y'
+    date_format_today: 'Vandaag %d-%m-%Y'
 ```
 
 Configuration variables:
@@ -41,6 +44,10 @@ Configuration variables:
 - **postcode** (*Required*): Your postal code.
 - **huisnummer** (*Required*): Your house number.
 - **resources** (*Required*): This section tells the component which types of garbage to get pickup dates for.
+
+- **date_format_default** (Optional): Date format to use, if omitted %d-%m-%y is used
+- **date_format_tomorrow** (Optional): Date format to use for tomorrow, if omitted 'Morgen %d-%m-%y' is used
+- **date_format_today** (Optional): Date format to use for today, if omitted 'Vandaag %d-%m-%y' is used
 
 You can create 2 extra sensors which hold the type of garbage to pickup today and tomorrow:
 ```yaml
