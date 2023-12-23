@@ -126,7 +126,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     entities = []
     for description in SENSOR_TYPES:
         if description.key in config[CONF_RESOURCES]:
-            sensor = TrashSensor(description, data, date_formats)
+            sensor = TrashSensor(description, data, date_formats, default_name)
             entities.append(sensor)
 
     async_add_entities(entities, True)
@@ -250,21 +250,21 @@ class TrashData(object):
 class TrashSensor(Entity):
     """Representation of a HVCGroep Sensor."""
 
-    def __init__(self, description, data, date_formats):
+    def __init__(self, description, data, date_formats, default_name):
         """Initialize the sensor."""
         self.entity_description = description
         self._data = data
         
         self._date_formats = date_formats
-
-        self._id =  SENSOR_LIST[description.key]
+        self._default_name = default_name
+        self._id = SENSOR_LIST[description.key]
         self._day = None
         self._state = None
 
         self._type = self.entity_description.key
         self._attr_icon = self.entity_description.icon
-        self._attr_name = SENSOR_PREFIX + " " + self.entity_description.name
-        self._attr_unique_id = f"{SENSOR_PREFIX} {self._id}"
+        self._attr_name = self._default_name + " " + self.entity_description.name
+        self._attr_unique_id = f"{self._default_name} {self._id}"
 
         self._discovery = False
         self._dev_id = {}
