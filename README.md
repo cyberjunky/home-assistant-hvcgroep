@@ -61,24 +61,24 @@ sensor:
         friendly_name: "Vandaag"
         value_template: >-
           {% set afval = '' %}
-          {% if is_state_attr('sensor.hvc_groep_gft', 'day', 'Vandaag') %}
+          {% if is_state_attr('sensor.hvc_groep_groene_bak_gft', 'day', 'Vandaag') %}
           {% set afval = 'Groene Bak' %}
           {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_papier', 'day', 'Vandaag') %}
+          {% if is_state_attr('sensor.hvc_groep_blauwe_bak_papier', 'day', 'Vandaag') %}
             {% if afval|length %}
               {% set afval = afval + ' + Blauwe Bak' %}
             {% else %}
               {% set afval = 'Blauwe Bak' %}
             {% endif %}
           {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_plastic', 'day', 'Vandaag') %}
+          {% if is_state_attr('sensor.hvc_groep_plastic_en_verpakking', 'day', 'Vandaag') %}
             {% if afval|length %}
               {% set afval = afval + ' + Plastic' %}
             {% else %}
               {% set afval = 'Plastic' %}
             {% endif %}
           {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_restafval', 'day', 'Vandaag') %}
+          {% if is_state_attr('sensor.hvc_groep_grijze_bak_restafval', 'day', 'Vandaag') %}
             {% if afval|length %}
               {% set afval = afval + ' + Grijze Bak' %}
             {% else %}
@@ -97,24 +97,24 @@ sensor:
         friendly_name: "Morgen"
         value_template: >-
           {% set afval = '' %}
-          {% if is_state_attr('sensor.hvc_groep_gft', 'day', 'Morgen') %}
+          {% if is_state_attr('sensor.hvc_groep_groene_bak_gft', 'day', 'Morgen') %}
           {% set afval = 'Groene Bak' %}
           {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_papier', 'day', 'Morgen') %}
+          {% if is_state_attr('sensor.hvc_groep_blauwe_bak_papier', 'day', 'Morgen') %}
             {% if afval|length %}
               {% set afval = afval + ' + Blauwe Bak' %}
             {% else %}
               {% set afval = 'Blauwe Bak' %}
             {% endif %}
           {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_plastic', 'day', 'Morgen') %}
+          {% if is_state_attr('sensor.hvc_groep_plastic_en_verpakking', 'day', 'Morgen') %}
             {% if afval|length %}
               {% set afval = afval + ' + Plastic' %}
             {% else %}
               {% set afval = 'Plastic' %}
             {% endif %}
           {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_restafval', 'day', 'Morgen') %}
+          {% if is_state_attr('sensor.hvc_groep_grijze_bak_restafval', 'day', 'Morgen') %}
             {% if afval|length %}
               {% set afval = afval + ' + Grijze Bak' %}
             {% else %}
@@ -134,10 +134,12 @@ And you can group them like so:
 # Example groups.yaml entry
 
 Afval Ophaaldagen:
-  - sensor.hvc_groep_gft
-  - sensor.hvc_groep_papier
-  - sensor.hvc_groep_plastic
-  - sensor.hvc_groep_restafval
+  - sensor.hvc_groep_blauwe_bak_papier
+  - sensor.hvc_groep_groene_bak_gft
+  - sensor.hvc_groep_plastic_en_verpakking
+  - sensor.hvc_groep_grijze_bak_restafval
+  - sensor.afval_vandaag
+  - sensor.afval_morgen
   - sensor.hvc_groep_reiniging
   - sensor.afval_vandaag
   - sensor.afval_morgen
