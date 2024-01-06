@@ -259,6 +259,7 @@ class TrashSensor(Entity):
         self._default_name = default_name
         self._id = SENSOR_LIST[description.key]
         self._day = None
+        self._datediff = None
         self._state = None
 
         self._type = self.entity_description.key
