@@ -232,19 +232,6 @@ If you find this library useful for your projects, please consider supporting it
 
 Every contribution, no matter the size, makes a difference and is greatly appreciated! 🙏
 
-## Changelog
-
-### Version 2.0.0
-
-- ✨ Added GUI configuration via config flow
-- 🔄 Added automatic YAML migration
-- 📊 Added "Pickup Today" and "Pickup Tomorrow" aggregate sensors
-- 🌐 Added English and Dutch translations
-- 📦 All sensors enabled by default (no resource selection needed)
-- 📅 Removed date format settings (using `device_class: date` for proper formatting)
-- 🏗️ Modernized to use `DataUpdateCoordinator` pattern
-- 🛡️ Improved error handling and connection validation
-
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
