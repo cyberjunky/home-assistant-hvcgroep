@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date
-from typing import Any
+from typing import Any, ClassVar
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -156,7 +156,7 @@ class HVCGroepAggregateSensor(HVCGroepBaseSensor):
     """Sensor showing what garbage is being picked up today or tomorrow."""
 
     # Human-readable names for garbage types (Dutch)
-    GARBAGE_NAMES: dict[str, str] = {
+    GARBAGE_NAMES: ClassVar[dict[str, str]] = {
         "gft": "Groene bak",
         "plastic": "Plastic",
         "papier": "Blauwe bak",
