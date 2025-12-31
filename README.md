@@ -1,180 +1,79 @@
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-orange.svg)](https://github.com/hacs/integration)  [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/) [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)
 
 # HVC Groep Sensor Component
-This is a Custom Component for Home-Assistant (https://home-assistant.io), it fetches garbage pickup dates for parts of The Netherlands using HVC Groep's REST API.
 
+This is a Custom Component for Home-Assistant (https://home-assistant.io) that fetches garbage pickup dates for parts of The Netherlands using HVC Groep's REST API.
+
+## Features
+
+- **GUI Configuration**: Easy setup through the Home Assistant UI
+- **All Sensors Enabled**: All garbage types are automatically available (disable individual sensors in HA if needed)
+- **Built-in Aggregate Sensors**: "Pickup Today" and "Pickup Tomorrow" sensors showing which bins are being collected
+- **Translations**: Available in English and Dutch (NL)
+- **YAML Migration**: Existing YAML configurations are automatically migrated
 
 ## Installation
 
 ### HACS - Recommended
-- Have [HACS](https://hacs.xyz) installed, this will allow you to easily manage and track updates.
-- Search for 'HVCGroep'.
-- Click Install below the found integration.
-- Configure using the configuration instructions below.
-- Restart Home-Assistant.
+
+1. Have [HACS](https://hacs.xyz) installed
+2. Search for 'HVC Groep'
+3. Click Install below the found integration
+4. Restart Home-Assistant
+5. Go to **Settings** → **Devices & Services** → **Add Integration** → search for "HVC Groep"
 
 ### Manual
-- Copy directory `custom_components/hvcgroep` to your `<config dir>/custom_components` directory.
-- Configure with config below.
-- Restart Home-Assistant.
 
-## Usage
-To use this component in your installation, add the following to your `configuration.yaml` file:
+1. Copy directory `custom_components/hvcgroep` to your `<config dir>/custom_components` directory
+2. Restart Home-Assistant
+3. Go to **Settings** → **Devices & Services** → **Add Integration** → search for "HVC Groep"
 
-```yaml
-# Example configuration.yaml entry
+## Configuration
 
-sensor:
-  - platform: hvcgroep
-    postcode: 1234AB
-    huisnummer: 1
-    resources:
-      - gft
-      - plastic
-      - papier
-      - restafval
-      - reiniging
-    date_format_default: '%d-%m-%Y'
-    date_format_tomorrow: 'Morgen %d-%m-%Y'
-    date_format_today: 'Vandaag %d-%m-%Y'
-```
+### GUI Setup (Recommended)
 
-Configuration variables:
+1. Go to **Settings** → **Devices & Services**
+2. Click **Add Integration**
+3. Search for "HVC Groep"
+4. Enter your postal code and house number
+5. Click **Submit**
 
-- **postcode** (*Required*): Your postal code.
-- **huisnummer** (*Required*): Your house number.
-- **resources** (*Required*): This section tells the component which types of garbage to get pickup dates for.
+That's it! All sensors will be automatically created.
 
-- **date_format_default** (Optional): Date format to use, if omitted %d-%m-%y is used
-- **date_format_tomorrow** (Optional): Date format to use for tomorrow, if omitted 'Morgen %d-%m-%y' is used
-- **date_format_today** (Optional): Date format to use for today, if omitted 'Vandaag %d-%m-%y' is used
+### Migration from YAML
 
-You can create 2 extra sensors which hold the type of garbage to pickup today and tomorrow:
-```yaml
-# Example configuration.yaml entry
+If you have an existing YAML configuration, it will be automatically imported when you restart Home Assistant. You will see a notification confirming the migration. After migration, you can remove the old YAML configuration from your `configuration.yaml`.
 
-sensor:
+## Sensors
 
-  - platform: template
-    sensors:
-      afval_vandaag:
-        friendly_name: "Vandaag"
-        value_template: >-
-          {% set afval = '' %}
-          {% if is_state_attr('sensor.hvc_groep_groene_bak_gft', 'day', 'Vandaag') %}
-          {% set afval = 'Groene Bak' %}
-          {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_blauwe_bak_papier', 'day', 'Vandaag') %}
-            {% if afval|length %}
-              {% set afval = afval + ' + Blauwe Bak' %}
-            {% else %}
-              {% set afval = 'Blauwe Bak' %}
-            {% endif %}
-          {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_plastic_en_verpakking', 'day', 'Vandaag') %}
-            {% if afval|length %}
-              {% set afval = afval + ' + Plastic' %}
-            {% else %}
-              {% set afval = 'Plastic' %}
-            {% endif %}
-          {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_grijze_bak_restafval', 'day', 'Vandaag') %}
-            {% if afval|length %}
-              {% set afval = afval + ' + Grijze Bak' %}
-            {% else %}
-              {% set afval = 'Grijze Bak' %}
-            {% endif %}
-          {% endif %}
-          {% if afval|length %}
-            {{afval}}
-          {% else %}
-            Geen
-          {% endif %}
+The integration creates the following sensors:
 
-  - platform: template
-    sensors:
-      afval_morgen:
-        friendly_name: "Morgen"
-        value_template: >-
-          {% set afval = '' %}
-          {% if is_state_attr('sensor.hvc_groep_groene_bak_gft', 'day', 'Morgen') %}
-          {% set afval = 'Groene Bak' %}
-          {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_blauwe_bak_papier', 'day', 'Morgen') %}
-            {% if afval|length %}
-              {% set afval = afval + ' + Blauwe Bak' %}
-            {% else %}
-              {% set afval = 'Blauwe Bak' %}
-            {% endif %}
-          {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_plastic_en_verpakking', 'day', 'Morgen') %}
-            {% if afval|length %}
-              {% set afval = afval + ' + Plastic' %}
-            {% else %}
-              {% set afval = 'Plastic' %}
-            {% endif %}
-          {% endif %}
-          {% if is_state_attr('sensor.hvc_groep_grijze_bak_restafval', 'day', 'Morgen') %}
-            {% if afval|length %}
-              {% set afval = afval + ' + Grijze Bak' %}
-            {% else %}
-              {% set afval = 'Grijze Bak' %}
-            {% endif %}
-          {% endif %}
-          {% if afval|length %}
-            {{afval}}
-          {% else %}
-            Geen
-          {% endif %}
+### Garbage Pickup Sensors
 
-```
+| Sensor | Description | Icon |
+|--------|-------------|------|
+| Green bin (organic) | GFT/organic waste pickup date | 🍎 |
+| Plastic and packaging | Plastic waste pickup date | ♻️ |
+| Blue bin (paper) | Paper waste pickup date | 📄 |
+| Grey bin (residual waste) | Residual waste pickup date | 🗑️ |
+| Cleaning | Street cleaning date | 💧 |
 
-And you can group them like so:
-```yaml
-# Example groups.yaml entry
+Each sensor shows the next pickup date and includes the following attributes:
+- `days_until_pickup`: Number of days until the next pickup
+- `day`: Set to "today" or "tomorrow" when applicable
 
-Afval Ophaaldagen:
-  - sensor.hvc_groep_blauwe_bak_papier
-  - sensor.hvc_groep_groene_bak_gft
-  - sensor.hvc_groep_plastic_en_verpakking
-  - sensor.hvc_groep_grijze_bak_restafval
-  - sensor.afval_vandaag
-  - sensor.afval_morgen
-  - sensor.hvc_groep_reiniging
-  - sensor.afval_vandaag
-  - sensor.afval_morgen
-```
+### Aggregate Sensors
 
-If you need to monitor more than one address you can create a config with names in them:
-```
-  - platform: hvcgroep
-    name: Adres1
-    postcode: 4321ZZ
-    huisnummer: 1
-    resources:
-      - gft
-      - plastic
-      - papier
-      - restafval
-    date_format_default: "%Y-%m-%d"
-    date_format_tomorrow: "Morgen %Y-%m-%d"
-    date_format_today: "Vandaag %Y-%m-%d"
+| Sensor | Description |
+|--------|-------------|
+| Pickup today | Shows which garbage types are being collected today |
+| Pickup tomorrow | Shows which garbage types are being collected tomorrow |
 
-  - platform: hvcgroep
-    name: Adres2
-    postcode: 1234AA
-    huisnummer: 3
-    resources:
-      - gft
-      - plastic
-      - papier
-      - restafval
-    date_format_default: "%Y-%m-%d"
-    date_format_tomorrow: "Morgen %Y-%m-%d"
-    date_format_today: "Vandaag %Y-%m-%d"
-```
+These sensors replace the need for template sensors - the integration handles the "today/tomorrow" logic automatically.
 
-Thing to fix/add is multiple pickups per day for 'today' and 'tomorrow' sensor.
+## Multiple Addresses
+
+You can configure multiple addresses by adding the integration multiple times through the GUI. Each address will create its own set of sensors grouped under a device.
 
 ## Screenshots
 
@@ -191,5 +90,18 @@ logger:
     custom_components.hvcgroep: debug
 ```
 
+## Changelog
+
+### Version 2.0.0
+- Added GUI configuration via config flow
+- Added automatic YAML migration
+- Added "Pickup Today" and "Pickup Tomorrow" aggregate sensors
+- Added English and Dutch translations
+- All sensors enabled by default (no resource selection needed)
+- Removed date format settings (using device_class date for proper formatting)
+- Modernized to use DataUpdateCoordinator pattern
+- Improved error handling and connection validation
+
 ## Donation
+
 [![Donate](https://img.shields.io/badge/Donate-PayPal-green.svg)](https://www.paypal.me/cyberjunkynl/)

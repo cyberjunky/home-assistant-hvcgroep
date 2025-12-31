@@ -1,0 +1,51 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "HVC Groep",
+                "description": "Stel de ophaaldata van HVC Groep in voor jouw adres.",
+                "data": {
+                    "postal_code": "Postcode",
+                    "house_number": "Huisnummer"
+                },
+                "data_description": {
+                    "postal_code": "Jouw Nederlandse postcode (bijv. 1234AB)",
+                    "house_number": "Jouw huisnummer"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Kan geen verbinding maken met HVC Groep. Controleer of jouw postcode en huisnummer correct zijn en in het HVC Groep servicebgereid liggen."
+        },
+        "abort": {
+            "already_configured": "Dit adres is al geconfigureerd.",
+            "cannot_connect": "Kan geen verbinding maken met HVC Groep API.",
+            "invalid_config": "Ongeldige configuratie opgegeven."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "gft": {
+                "name": "Groene bak (GFT)"
+            },
+            "plastic": {
+                "name": "Plastic en verpakking"
+            },
+            "papier": {
+                "name": "Blauwe bak (papier)"
+            },
+            "restafval": {
+                "name": "Grijze bak (restafval)"
+            },
+            "reiniging": {
+                "name": "Reiniging"
+            },
+            "pickup_today": {
+                "name": "Ophalen vandaag"
+            },
+            "pickup_tomorrow": {
+                "name": "Ophalen morgen"
+            }
+        }
+    }
+}

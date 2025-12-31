@@ -1,313 +1,193 @@
-"""
-Support for reading trash pickup dates for HVC groep areas.
+"""Sensors for HVC Groep integration."""
+from __future__ import annotations
 
-configuration.yaml
-
-sensor:
-    - platform: hvcgroep
-        postcode: 1234AB
-        huisnummer: 1
-        resources:
-        - gft
-        - plastic
-        - papier
-        - restafval
-        - reiniging
-        date_format_default: '%d-%m-%Y'
-        date_format_today: 'Vandaag %d-%m-%Y'
-        date_format_tomorrow: 'Morgen %d-%m-%Y'
-"""
 import logging
-from datetime import timedelta
-from datetime import datetime
-import voluptuous as vol
-from typing import Final
+from datetime import date
+from typing import Any
 
-import aiohttp
-import asyncio
-import async_timeout
-
-import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.components.sensor import (
-    PLATFORM_SCHEMA,
+    SensorDeviceClass,
     SensorEntity,
-    SensorEntityDescription
+    SensorEntityDescription,
 )
-from homeassistant.const import (
-    CONF_NAME, CONF_SCAN_INTERVAL, CONF_RESOURCES
-    )
-from homeassistant.helpers.entity import Entity
-from homeassistant.util import Throttle
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-BAGID_URL = 'https://apps.hvcgroep.nl/rest/adressen/{0}-{1}'
-WASTE_URL = 'https://apps.hvcgroep.nl/rest/adressen/{0}/afvalstromen'
+from .const import CONF_POSTAL_CODE, DOMAIN, GARBAGE_TYPES
+from .coordinator import HVCGroepDataUpdateCoordinator
+
 _LOGGER = logging.getLogger(__name__)
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(hours=1)
 
-SENSOR_PREFIX = 'HVC Groep'
-CONST_POSTCODE = "postcode"
-CONST_HUISNUMMER = "huisnummer"
-CONF_FORMAT_DEFAULT = 'date_format_default'
-CONF_FORMAT_TODAY = 'date_format_today'
-CONF_FORMAT_TOMORROW = 'date_format_tomorrow'
-
-SENSOR_LIST = {
-    "gft": 5,
-    "plastic": 6,
-    "papier": 3,
-    "restafval": 2,
-    "reiniging": 59
-}
-
-SENSOR_TYPES: Final[tuple[SensorEntityDescription, ...]] = (
+# Sensor descriptions for garbage types
+GARBAGE_SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = tuple(
     SensorEntityDescription(
-        key="gft",
-        name="Groene Bak GFT",
-        icon="mdi:food-apple-outline"
-    ),
-    SensorEntityDescription(
-        key="plastic",
-        name="Plastic en Verpakking",
-        icon="mdi:recycle"
-    ),
-    SensorEntityDescription(
-        key="papier",
-        name="Blauwe Bak Papier",
-        icon="mdi:file"
-    ),
-    SensorEntityDescription(
-        key="restafval",
-        name="Grijze Bak Restafval",
-        icon="mdi:delete-empty"
-    ),
-    SensorEntityDescription(
-        key="reiniging",
-        name="Reiniging",
-        icon="mdi:liquid-spot"
+        key=key,
+        translation_key=info["translation_key"],
+        icon=info["icon"],
+        device_class=SensorDeviceClass.DATE,
     )
+    for key, info in GARBAGE_TYPES.items()
 )
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Optional(CONF_NAME, default=SENSOR_PREFIX): cv.string,
-    vol.Required(CONST_POSTCODE): cv.string,
-    vol.Required(CONST_HUISNUMMER): cv.string,
-    vol.Required(CONF_RESOURCES, default=list(SENSOR_LIST)):
-        vol.All(cv.ensure_list, [vol.In(SENSOR_LIST)]),
-    vol.Optional(CONF_FORMAT_DEFAULT, default='%d-%m-%Y'): cv.string,
-    vol.Optional(CONF_FORMAT_TODAY, default='Vandaag %d-%m-%Y'): cv.string,
-    vol.Optional(CONF_FORMAT_TOMORROW, default='Morgen %d-%m-%Y'): cv.string,
-})
+# Aggregate sensor descriptions
+AGGREGATE_SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = (
+    SensorEntityDescription(
+        key="pickup_today",
+        translation_key="pickup_today",
+        icon="mdi:calendar-today",
+    ),
+    SensorEntityDescription(
+        key="pickup_tomorrow",
+        translation_key="pickup_tomorrow",
+        icon="mdi:calendar-arrow-right",
+    ),
+)
 
 
-async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
-    """Setup the HVCGroep sensors."""
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up HVC Groep sensors based on a config entry."""
+    coordinator: HVCGroepDataUpdateCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    scan_interval = config.get(CONF_SCAN_INTERVAL)
-    postcode = config.get(CONST_POSTCODE)
-    huisnummer = config.get(CONST_HUISNUMMER)
-    default_name = config.get(CONF_NAME)
-    date_formats = {
-        'default': config.get(CONF_FORMAT_DEFAULT),
-        'today': config.get(CONF_FORMAT_TODAY),
-        'tomorrow': config.get(CONF_FORMAT_TOMORROW)
-    }
+    entities: list[SensorEntity] = []
 
-    session = async_get_clientsession(hass)
-
-    data = TrashData(session, postcode, huisnummer)
-    try:
-        await data.async_update()
-    except ValueError as err:
-        _LOGGER.error("Error while fetching data from HVCGroep: %s", err)
-        return
-
-    entities = []
-    for description in SENSOR_TYPES:
-        if description.key in config[CONF_RESOURCES]:
-            sensor = TrashSensor(description, data, date_formats, default_name)
-            entities.append(sensor)
-
-    async_add_entities(entities, True)
-
-
-# pylint: disable=abstract-method
-class TrashData(object):
-    """Handle HVCGroep object and limit updates."""
-
-    def __init__(self, session, postcode, huisnummer):
-        """Initialize."""
-
-        self._session = session
-        self._postcode = postcode
-        self._huisnummer = huisnummer
-        self._bagid = None
-        self._data = None
-
-    async def _get_bagid(self):
-        """Get the bagid using postcode and huisnummer."""
-
-        try:
-            with async_timeout.timeout(5):
-                response = await self._session.get(self._build_bagid_url())
-            _LOGGER.debug(
-                "Response status from HVC bagid: %s", response.status
+    # Add garbage type sensors
+    for description in GARBAGE_SENSOR_DESCRIPTIONS:
+        entities.append(
+            HVCGroepGarbageSensor(
+                coordinator=coordinator,
+                entry=entry,
+                description=description,
             )
-        except aiohttp.ClientError:
-            _LOGGER.error("Cannot connect to HVC for bagid")
-            self._data = None
-            return
-        except asyncio.TimeoutError:
-            _LOGGER.error("Timeout occured while trying to get bagid from HVC")
-            self._data = None
-            return
-        except Exception as err:
-            _LOGGER.error("Unknown error occured while trying to get bagid from HVC: %s", err)
-            self._data = None
-            return
+        )
 
-        try:
-            json_data = await response.json()
-            _LOGGER.debug("Data received from HVC: %s", json_data)
-            self._bagid = json_data[0]["bagId"]
-            _LOGGER.debug("Found BagId = %s", self._bagid)
-        except Exception as err:
-            _LOGGER.error("Cannot parse data from HVC: %s", err)
-            self._data = None
-            return
-
-    def _build_bagid_url(self):
-        """Build the URL for the requests."""
-        url = BAGID_URL.format(self._postcode, self._huisnummer)
-        _LOGGER.debug("Bagid fetch URL: %s", url)
-        return url
-
-    def _build_waste_url(self):
-        """Build the URL for the requests."""
-        url = WASTE_URL.format(self._bagid)
-        _LOGGER.debug("Waste fetch URL: %s", url)
-        return url
-
-    @property
-    def latest_data(self):
-        """Return the latest data object."""
-        if self._data:
-            return self._data
-        return None
-
-    @Throttle(MIN_TIME_BETWEEN_UPDATES)
-    async def async_update(self):
-        """Get the afvalstromen data."""
-        if not self._bagid:
-            await self._get_bagid()
-
-        trashschedule = []
-        try:
-            with async_timeout.timeout(5):
-                response = await self._session.get(self._build_waste_url())
-            _LOGGER.debug(
-                "Response status from HVC: %s", response.status
+    # Add aggregate sensors (today/tomorrow pickup)
+    for description in AGGREGATE_SENSOR_DESCRIPTIONS:
+        entities.append(
+            HVCGroepAggregateSensor(
+                coordinator=coordinator,
+                entry=entry,
+                description=description,
             )
-        except aiohttp.ClientError:
-            _LOGGER.error("Cannot connect to HVC")
-            self._data = None
-            return
-        except asyncio.TimeoutError:
-            _LOGGER.error("Timeout occured while trying to connect to HVC")
-            self._data = None
-            return
-        except Exception as err:
-            _LOGGER.error("Unknown error occured while downloading data from HVC: %s", err)
-            self._data = None
-            return
+        )
 
-        try:
-            json_data = await response.json()
-            _LOGGER.debug("Data received from HVC: %s", json_data)
-        except Exception as err:
-            _LOGGER.error("Cannot parse data from HVC: %s", err)
-            self._data = None
-            return
-
-        """Parse the afvalstromen data."""
-        try:
-            for afval in json_data:
-                if afval['ophaaldatum'] != None:
-                    _LOGGER.debug("Afvalstromen id: %s Type: %s Datum: %s", afval['id'], afval['title'], afval['ophaaldatum'])
-                    trash = {}
-                    trash['id'] = afval['id']
-                    trash['title'] = afval['title']
-                    trash['date'] = datetime.strptime(afval['ophaaldatum'], '%Y-%m-%d')
-                    trashschedule.append(trash)
-            self._data = trashschedule
-        except ValueError as err:
-            _LOGGER.error("Cannot parse the afvalstomen data %s", err.args)
-            self._data = None
-            return False
+    async_add_entities(entities)
 
 
-class TrashSensor(Entity):
-    """Representation of a HVCGroep Sensor."""
+class HVCGroepBaseSensor(CoordinatorEntity[HVCGroepDataUpdateCoordinator], SensorEntity):
+    """Base class for HVC Groep sensors."""
 
-    def __init__(self, description, data, date_formats, default_name):
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: HVCGroepDataUpdateCoordinator,
+        entry: ConfigEntry,
+        description: SensorEntityDescription,
+    ) -> None:
         """Initialize the sensor."""
+        super().__init__(coordinator)
         self.entity_description = description
-        self._data = data
-        
-        self._date_formats = date_formats
-        self._default_name = default_name
-        self._id = SENSOR_LIST[description.key]
-        self._day = None
-        self._datediff = None
-        self._state = None
+        self._entry = entry
 
-        self._type = self.entity_description.key
-        self._attr_icon = self.entity_description.icon
-        self._attr_name = self._default_name + " " + self.entity_description.name
-        self._attr_unique_id = f"{self._default_name} {self._id}"
+        # Create unique ID
+        self._attr_unique_id = f"{entry.entry_id}_{description.key}"
 
-        self._discovery = False
-        self._dev_id = {}
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
-
-    @property
-    def extra_state_attributes(self):
-        """Return the state attributes of this device."""
-        return {
-            "day": self._day,
-            "datediff": self._datediff
+        # Device info - group all sensors under one device
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, entry.entry_id)},
+            "name": f"HVC Groep ({entry.data[CONF_POSTAL_CODE]})",
+            "manufacturer": "HVC Groep",
+            "model": "Waste Collection",
+            "configuration_url": "https://www.hvcgroep.nl",
         }
 
-    async def async_update(self):
-        """Get the latest data and use it to update our sensor state."""
 
-        await self._data.async_update()
-        trash = self._data.latest_data
+class HVCGroepGarbageSensor(HVCGroepBaseSensor):
+    """Sensor for a specific garbage type pickup date."""
 
-        today = datetime.today()
+    @property
+    def native_value(self) -> date | None:
+        """Return the pickup date."""
+        if not self.coordinator.data:
+            return None
 
-        if trash:
-            for d in trash:
-                pickupdate = d['date']
-                datediff = (pickupdate - today).days + 1
-                if d['id'] == self._id:
-                    self._datediff = datediff
-                    if datediff > 1:
-                        self._state = pickupdate.strftime(self._date_formats['default'])
-                        self._day = None
-                    elif datediff == 1:
-                        self._state = pickupdate.strftime(self._date_formats['tomorrow'])
-                        self._day = "Morgen"
-                    elif datediff <= 0:
-                        self._state = pickupdate.strftime(self._date_formats['today'])
-                        self._day = "Vandaag"
-                    else:
-                        self._state = None
-                        self._day = None
+        garbage_data = self.coordinator.data.get("garbage", {})
+        type_data = garbage_data.get(self.entity_description.key)
 
-            _LOGGER.debug("Device: {} State: {}".format(self._attr_name, self._state))
+        if type_data:
+            return type_data.get("pickup_date")
+
+        return None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        if not self.coordinator.data:
+            return {}
+
+        garbage_data = self.coordinator.data.get("garbage", {})
+        type_data = garbage_data.get(self.entity_description.key)
+
+        if type_data:
+            days_until = type_data.get("days_until", 0)
+            attrs = {
+                "days_until_pickup": days_until,
+            }
+
+            # Add day indicator for today/tomorrow
+            if days_until == 0:
+                attrs["day"] = "today"
+            elif days_until == 1:
+                attrs["day"] = "tomorrow"
+
+            return attrs
+
+        return {}
+
+
+class HVCGroepAggregateSensor(HVCGroepBaseSensor):
+    """Sensor showing what garbage is being picked up today or tomorrow."""
+
+    # Human-readable names for garbage types (Dutch)
+    GARBAGE_NAMES: dict[str, str] = {
+        "gft": "Groene bak",
+        "plastic": "Plastic",
+        "papier": "Blauwe bak",
+        "restafval": "Grijze bak",
+        "reiniging": "Reiniging",
+    }
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the list of garbage types being picked up."""
+        if not self.coordinator.data:
+            return None
+
+        pickup_list = self.coordinator.data.get(self.entity_description.key, [])
+
+        if not pickup_list:
+            return None
+
+        # Build display string from human-readable names
+        names = [self.GARBAGE_NAMES.get(g, g) for g in pickup_list]
+        return " + ".join(names)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return additional state attributes."""
+        if not self.coordinator.data:
+            return {}
+
+        pickup_list = self.coordinator.data.get(self.entity_description.key, [])
+
+        return {
+            "garbage_types": pickup_list,
+            "count": len(pickup_list),
+        }

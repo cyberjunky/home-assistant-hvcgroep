@@ -1,0 +1,51 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "HVC Groep",
+                "description": "Set up HVC Groep waste collection schedule for your address.",
+                "data": {
+                    "postal_code": "Postal code",
+                    "house_number": "House number"
+                },
+                "data_description": {
+                    "postal_code": "Your Dutch postal code (e.g., 1234AB)",
+                    "house_number": "Your house number"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Cannot connect to HVC Groep. Please verify your postal code and house number are correct and in an HVC Groep service area."
+        },
+        "abort": {
+            "already_configured": "This address is already configured.",
+            "cannot_connect": "Cannot connect to HVC Groep API.",
+            "invalid_config": "Invalid configuration provided."
+        }
+    },
+    "entity": {
+        "sensor": {
+            "gft": {
+                "name": "Green bin (organic)"
+            },
+            "plastic": {
+                "name": "Plastic and packaging"
+            },
+            "papier": {
+                "name": "Blue bin (paper)"
+            },
+            "restafval": {
+                "name": "Grey bin (residual waste)"
+            },
+            "reiniging": {
+                "name": "Cleaning"
+            },
+            "pickup_today": {
+                "name": "Pickup today"
+            },
+            "pickup_tomorrow": {
+                "name": "Pickup tomorrow"
+            }
+        }
+    }
+}
