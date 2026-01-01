@@ -1,13 +1,15 @@
 {
   "domain": "hvcgroep",
   "name": "HVC Groep",
-  "version": "2.0.0",
+  "codeowners": [
+    "@cyberjunky"
+  ],
+  "config_flow": true,
+  "dependencies": [],
   "documentation": "https://github.com/cyberjunky/home-assistant-hvcgroep",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/cyberjunky/home-assistant-hvcgroep/issues",
   "requirements": [],
-  "dependencies": [],
-  "codeowners": ["@cyberjunky"],
-  "config_flow": true,
-  "iot_class": "cloud_polling",
-  "integration_type": "service"
+  "version": "2.0.0"
 }
