@@ -17,6 +17,9 @@ _LOGGER = logging.getLogger(__name__)
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
+# This integration is configured via config entries only
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 # Legacy YAML configuration schema
 LEGACY_PLATFORM_SCHEMA = vol.Schema(
     {

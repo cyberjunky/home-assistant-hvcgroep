@@ -1,9 +1,6 @@
 {
   "name": "HVCGroep",
   "country": "NL",
-  "domains": [
-    "sensor"
-  ],
   "render_readme": true,
   "homeassistant": "2025.2.4",
   "hacs": "2.0.5"
