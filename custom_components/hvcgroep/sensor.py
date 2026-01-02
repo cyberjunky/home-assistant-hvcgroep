@@ -6,7 +6,6 @@ from datetime import date
 from typing import Any, ClassVar
 
 from homeassistant.components.sensor import (
-    SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
 )
