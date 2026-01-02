@@ -123,15 +123,23 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
             return "en"
         return "nl"
 
-    def _get_days_until(self) -> int | None:
-        """Get days until pickup for the current garbage type."""
-        if not self.coordinator.data:
+    def _get_days_until(self, pickup_date: date | None = None) -> int | None:
+        """Calculate days until pickup dynamically from the pickup date."""
+        if pickup_date is None:
+            if not self.coordinator.data:
+                return None
+            garbage_data = self.coordinator.data.get("garbage", {})
+            type_data = garbage_data.get(self.entity_description.key)
+            if type_data:
+                pickup_date = type_data.get("pickup_date")
+            else:
+                return None
+
+        if pickup_date is None:
             return None
-        garbage_data = self.coordinator.data.get("garbage", {})
-        type_data = garbage_data.get(self.entity_description.key)
-        if type_data:
-            return type_data.get("days_until")
-        return None
+
+        today = date.today()
+        return (pickup_date - today).days
 
     def _format_date(self, pickup_date: date, days_until: int) -> str:
         """Format date based on language setting, with today/tomorrow prefix."""
@@ -160,9 +168,11 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
 
         if type_data:
             pickup_date = type_data.get("pickup_date")
-            days_until = type_data.get("days_until", 0)
             if pickup_date:
-                return self._format_date(pickup_date, days_until)
+                # Calculate days_until dynamically for accurate today/tomorrow detection
+                days_until = self._get_days_until(pickup_date)
+                if days_until is not None:
+                    return self._format_date(pickup_date, days_until)
 
         return None
 
@@ -176,21 +186,25 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
         type_data = garbage_data.get(self.entity_description.key)
 
         if type_data:
-            days_until = type_data.get("days_until", 0)
-            lang = self._get_language()
-            translations = self.DAY_TRANSLATIONS.get(lang, self.DAY_TRANSLATIONS["nl"])
+            pickup_date = type_data.get("pickup_date")
+            # Calculate days_until dynamically
+            days_until = self._get_days_until(pickup_date) if pickup_date else None
 
-            attrs = {
-                "days_until_pickup": days_until,
-            }
+            if days_until is not None:
+                lang = self._get_language()
+                translations = self.DAY_TRANSLATIONS.get(lang, self.DAY_TRANSLATIONS["nl"])
 
-            # Add translated day indicator for today/tomorrow
-            if days_until == 0:
-                attrs["day"] = translations["today"]
-            elif days_until == 1:
-                attrs["day"] = translations["tomorrow"]
+                attrs = {
+                    "days_until_pickup": days_until,
+                }
 
-            return attrs
+                # Add translated day indicator for today/tomorrow
+                if days_until == 0:
+                    attrs["day"] = translations["today"]
+                elif days_until == 1:
+                    attrs["day"] = translations["tomorrow"]
+
+                return attrs
 
         return {}
 
