@@ -27,7 +27,6 @@ GARBAGE_SENSOR_DESCRIPTIONS: tuple[SensorEntityDescription, ...] = tuple(
         key=key,
         translation_key=info["translation_key"],
         icon=info["icon"],
-        device_class=SensorDeviceClass.DATE,
     )
     for key, info in GARBAGE_TYPES.items()
 )
@@ -112,9 +111,22 @@ class HVCGroepBaseSensor(CoordinatorEntity[HVCGroepDataUpdateCoordinator], Senso
 class HVCGroepGarbageSensor(HVCGroepBaseSensor):
     """Sensor for a specific garbage type pickup date."""
 
+    def _get_language(self) -> str:
+        """Get the configured language, defaulting to Dutch."""
+        lang = self.coordinator.hass.config.language
+        if lang and lang.startswith("en"):
+            return "en"
+        return "nl"
+
+    def _format_date(self, pickup_date: date) -> str:
+        """Format date based on language setting."""
+        if self._get_language() == "en":
+            return pickup_date.strftime("%m-%d-%Y")  # US format
+        return pickup_date.strftime("%d-%m-%Y")  # Dutch/EU format
+
     @property
-    def native_value(self) -> date | None:
-        """Return the pickup date."""
+    def native_value(self) -> str | None:
+        """Return the pickup date formatted according to language."""
         if not self.coordinator.data:
             return None
 
@@ -122,7 +134,9 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
         type_data = garbage_data.get(self.entity_description.key)
 
         if type_data:
-            return type_data.get("pickup_date")
+            pickup_date = type_data.get("pickup_date")
+            if pickup_date:
+                return self._format_date(pickup_date)
 
         return None
 
@@ -155,8 +169,8 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
 class HVCGroepAggregateSensor(HVCGroepBaseSensor):
     """Sensor showing what garbage is being picked up today or tomorrow."""
 
-    # Human-readable names for garbage types (Dutch)
-    GARBAGE_NAMES: ClassVar[dict[str, str]] = {
+    # Human-readable names for garbage types per language
+    GARBAGE_NAMES_NL: ClassVar[dict[str, str]] = {
         "gft": "Groene bak",
         "plastic": "Plastic",
         "papier": "Blauwe bak",
@@ -164,19 +178,53 @@ class HVCGroepAggregateSensor(HVCGroepBaseSensor):
         "reiniging": "Reiniging",
     }
 
+    GARBAGE_NAMES_EN: ClassVar[dict[str, str]] = {
+        "gft": "Green bin",
+        "plastic": "Plastic",
+        "papier": "Blue bin",
+        "restafval": "Grey bin",
+        "reiniging": "Cleaning",
+    }
+
+    # "None" translations
+    NONE_VALUES: ClassVar[dict[str, str]] = {
+        "nl": "Geen",
+        "en": "None",
+    }
+
+    def _get_language(self) -> str:
+        """Get the configured language, defaulting to Dutch since HVC Groep is a Dutch service."""
+        lang = self.coordinator.hass.config.language
+        # Only use English if explicitly set to English, otherwise default to Dutch
+        if lang and lang.startswith("en"):
+            return "en"
+        return "nl"
+
+    def _get_none_value(self) -> str:
+        """Get the translated 'None' value."""
+        lang = self._get_language()
+        return self.NONE_VALUES.get(lang, "Geen")
+
+    def _get_garbage_names(self) -> dict[str, str]:
+        """Get the garbage names dictionary for the current language."""
+        if self._get_language() == "en":
+            return self.GARBAGE_NAMES_EN
+        return self.GARBAGE_NAMES_NL
+
     @property
-    def native_value(self) -> str | None:
+    def native_value(self) -> str:
         """Return the list of garbage types being picked up."""
         if not self.coordinator.data:
-            return None
+            return self._get_none_value()
 
         pickup_list = self.coordinator.data.get(self.entity_description.key, [])
 
         if not pickup_list:
-            return None
+            return self._get_none_value()
 
         # Build display string from human-readable names
-        names = [self.GARBAGE_NAMES.get(g, g) for g in pickup_list]
+        garbage_names = self._get_garbage_names()
+        names = [garbage_names.get(g, g) for g in pickup_list]
         return " + ".join(names)
 
     @property
