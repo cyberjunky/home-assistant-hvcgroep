@@ -111,6 +111,12 @@ class HVCGroepBaseSensor(CoordinatorEntity[HVCGroepDataUpdateCoordinator], Senso
 class HVCGroepGarbageSensor(HVCGroepBaseSensor):
     """Sensor for a specific garbage type pickup date."""
 
+    # Day translations
+    DAY_TRANSLATIONS: ClassVar[dict[str, dict[str, str]]] = {
+        "nl": {"today": "Vandaag", "tomorrow": "Morgen"},
+        "en": {"today": "Today", "tomorrow": "Tomorrow"},
+    }
+
     def _get_language(self) -> str:
         """Get the configured language, defaulting to Dutch."""
         lang = self.coordinator.hass.config.language
@@ -118,9 +124,29 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
             return "en"
         return "nl"
 
-    def _format_date(self, pickup_date: date) -> str:
-        """Format date based on language setting."""
-        if self._get_language() == "en":
+    def _get_days_until(self) -> int | None:
+        """Get days until pickup for the current garbage type."""
+        if not self.coordinator.data:
+            return None
+        garbage_data = self.coordinator.data.get("garbage", {})
+        type_data = garbage_data.get(self.entity_description.key)
+        if type_data:
+            return type_data.get("days_until")
+        return None
+
+    def _format_date(self, pickup_date: date, days_until: int) -> str:
+        """Format date based on language setting, with today/tomorrow prefix."""
+        lang = self._get_language()
+        translations = self.DAY_TRANSLATIONS.get(lang, self.DAY_TRANSLATIONS["nl"])
+
+        # For today/tomorrow, just return the translated word without date
+        if days_until == 0:
+            return translations["today"]
+        elif days_until == 1:
+            return translations["tomorrow"]
+
+        # For future dates, return formatted date
+        if lang == "en":
             return pickup_date.strftime("%m-%d-%Y")  # US format
         return pickup_date.strftime("%d-%m-%Y")  # Dutch/EU format
 
@@ -135,8 +161,9 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
 
         if type_data:
             pickup_date = type_data.get("pickup_date")
+            days_until = type_data.get("days_until", 0)
             if pickup_date:
-                return self._format_date(pickup_date)
+                return self._format_date(pickup_date, days_until)
 
         return None
 
@@ -151,15 +178,18 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
 
         if type_data:
             days_until = type_data.get("days_until", 0)
+            lang = self._get_language()
+            translations = self.DAY_TRANSLATIONS.get(lang, self.DAY_TRANSLATIONS["nl"])
+
             attrs = {
                 "days_until_pickup": days_until,
             }
 
-            # Add day indicator for today/tomorrow
+            # Add translated day indicator for today/tomorrow
             if days_until == 0:
-                attrs["day"] = "today"
+                attrs["day"] = translations["today"]
             elif days_until == 1:
-                attrs["day"] = "tomorrow"
+                attrs["day"] = translations["tomorrow"]
 
             return attrs
 
