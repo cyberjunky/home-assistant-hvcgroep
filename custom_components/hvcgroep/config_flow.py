@@ -5,9 +5,25 @@ import logging
 from typing import Any
 
 import voluptuous as vol
-from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
+from homeassistant.config_entries import (
+    ConfigEntry,
+    ConfigFlow,
+    ConfigFlowResult,
+    OptionsFlow,
+)
+from homeassistant.core import callback
 
-from .const import CONF_HOUSE_NUMBER, CONF_POSTAL_CODE, DOMAIN
+from .const import (
+    CONF_DATE_FORMAT_DEFAULT,
+    CONF_DATE_FORMAT_TODAY,
+    CONF_DATE_FORMAT_TOMORROW,
+    CONF_HOUSE_NUMBER,
+    CONF_POSTAL_CODE,
+    DEFAULT_DATE_FORMAT,
+    DEFAULT_DATE_FORMAT_TODAY,
+    DEFAULT_DATE_FORMAT_TOMORROW,
+    DOMAIN,
+)
 from .coordinator import validate_connection
 
 _LOGGER = logging.getLogger(__name__)
@@ -17,6 +33,12 @@ class HVCGroepConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for HVC Groep."""
 
     VERSION = 1
+
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry: ConfigEntry) -> OptionsFlow:
+        """Get the options flow for this handler."""
+        return HVCGroepOptionsFlow()
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -85,4 +107,43 @@ class HVCGroepConfigFlow(ConfigFlow, domain=DOMAIN):
                 CONF_POSTAL_CODE: postal_code,
                 CONF_HOUSE_NUMBER: house_number,
             },
+        )
+
+
+class HVCGroepOptionsFlow(OptionsFlow):
+    """Handle options flow for HVC Groep."""
+
+    async def async_step_init(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        # Get current values or defaults
+        options = self.config_entry.options
+        current_default = options.get(CONF_DATE_FORMAT_DEFAULT, DEFAULT_DATE_FORMAT)
+        current_today = options.get(CONF_DATE_FORMAT_TODAY, DEFAULT_DATE_FORMAT_TODAY)
+        current_tomorrow = options.get(
+            CONF_DATE_FORMAT_TOMORROW, DEFAULT_DATE_FORMAT_TOMORROW
+        )
+
+        return self.async_show_form(
+            step_id="init",
+            data_schema=vol.Schema(
+                {
+                    vol.Optional(
+                        CONF_DATE_FORMAT_DEFAULT,
+                        default=current_default,
+                    ): str,
+                    vol.Optional(
+                        CONF_DATE_FORMAT_TODAY,
+                        default=current_today,
+                    ): str,
+                    vol.Optional(
+                        CONF_DATE_FORMAT_TOMORROW,
+                        default=current_tomorrow,
+                    ): str,
+                }
+            ),
         )

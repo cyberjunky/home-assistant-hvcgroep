@@ -14,7 +14,17 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import CONF_POSTAL_CODE, DOMAIN, GARBAGE_TYPES
+from .const import (
+    CONF_DATE_FORMAT_DEFAULT,
+    CONF_DATE_FORMAT_TODAY,
+    CONF_DATE_FORMAT_TOMORROW,
+    CONF_POSTAL_CODE,
+    DEFAULT_DATE_FORMAT,
+    DEFAULT_DATE_FORMAT_TODAY,
+    DEFAULT_DATE_FORMAT_TOMORROW,
+    DOMAIN,
+    GARBAGE_TYPES,
+)
 from .coordinator import HVCGroepDataUpdateCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -110,18 +120,54 @@ class HVCGroepBaseSensor(CoordinatorEntity[HVCGroepDataUpdateCoordinator], Senso
 class HVCGroepGarbageSensor(HVCGroepBaseSensor):
     """Sensor for a specific garbage type pickup date."""
 
-    # Day translations
-    DAY_TRANSLATIONS: ClassVar[dict[str, dict[str, str]]] = {
-        "nl": {"today": "Vandaag", "tomorrow": "Morgen"},
-        "en": {"today": "Today", "tomorrow": "Tomorrow"},
+    # Hardcoded translations for day and month names to avoid blocking I/O from babel
+    DAY_NAMES: ClassVar[dict[str, list[str]]] = {
+        "en": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+        "nl": ["Maandag", "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"],
+        "de": ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"],
+        "fr": ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi", "Dimanche"],
     }
 
+    DAY_ABBR: ClassVar[dict[str, list[str]]] = {
+        "en": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        "nl": ["Ma", "Di", "Wo", "Do", "Vr", "Za", "Zo"],
+        "de": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+        "fr": ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"],
+    }
+
+    MONTH_NAMES: ClassVar[dict[str, list[str]]] = {
+        "en": ["January", "February", "March", "April", "May", "June",
+               "July", "August", "September", "October", "November", "December"],
+        "nl": ["januari", "februari", "maart", "april", "mei", "juni",
+               "juli", "augustus", "september", "oktober", "november", "december"],
+        "de": ["Januar", "Februar", "März", "April", "Mai", "Juni",
+               "Juli", "August", "September", "Oktober", "November", "Dezember"],
+        "fr": ["janvier", "février", "mars", "avril", "mai", "juin",
+               "juillet", "août", "septembre", "octobre", "novembre", "décembre"],
+    }
+
+    MONTH_ABBR: ClassVar[dict[str, list[str]]] = {
+        "en": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+        "nl": ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"],
+        "de": ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"],
+        "fr": ["jan", "fév", "mar", "avr", "mai", "jun", "jul", "aoû", "sep", "oct", "nov", "déc"],
+    }
+
+    def _get_date_format(self, format_key: str, default: str) -> str:
+        """Get date format from options or return default."""
+        return self._entry.options.get(format_key, default)
+
     def _get_language(self) -> str:
-        """Get the configured language, defaulting to Dutch."""
+        """Get language code from HA language setting."""
         lang = self.coordinator.hass.config.language
-        if lang and lang.startswith("en"):
-            return "en"
-        return "nl"
+        _LOGGER.debug("HA language setting: %s", lang)
+        if lang and lang.startswith("nl"):
+            return "nl"
+        elif lang and lang.startswith("de"):
+            return "de"
+        elif lang and lang.startswith("fr"):
+            return "fr"
+        return "en"
 
     def _get_days_until(self, pickup_date: date | None = None) -> int | None:
         """Calculate days until pickup dynamically from the pickup date."""
@@ -142,20 +188,46 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
         return (pickup_date - today).days
 
     def _format_date(self, pickup_date: date, days_until: int) -> str:
-        """Format date based on language setting, with today/tomorrow prefix."""
-        lang = self._get_language()
-        translations = self.DAY_TRANSLATIONS.get(lang, self.DAY_TRANSLATIONS["nl"])
-
-        # For today/tomorrow, just return the translated word without date
+        """Format date using configured format strings with locale support."""
         if days_until == 0:
-            return translations["today"]
+            fmt = self._get_date_format(
+                CONF_DATE_FORMAT_TODAY, DEFAULT_DATE_FORMAT_TODAY
+            )
         elif days_until == 1:
-            return translations["tomorrow"]
+            fmt = self._get_date_format(
+                CONF_DATE_FORMAT_TOMORROW, DEFAULT_DATE_FORMAT_TOMORROW
+            )
+        else:
+            fmt = self._get_date_format(
+                CONF_DATE_FORMAT_DEFAULT, DEFAULT_DATE_FORMAT
+            )
 
-        # For future dates, return formatted date
-        if lang == "en":
-            return pickup_date.strftime("%m-%d-%Y")  # US format
-        return pickup_date.strftime("%d-%m-%Y")  # Dutch/EU format
+        # Check if format contains locale-sensitive patterns (%A, %B, %a, %b)
+        locale_patterns = ["%A", "%B", "%a", "%b"]
+        if any(p in fmt for p in locale_patterns):
+            lang = self._get_language()
+            result = fmt
+
+            # weekday() returns 0=Monday, 6=Sunday
+            if "%A" in result:
+                day_names = self.DAY_NAMES.get(lang, self.DAY_NAMES["en"])
+                result = result.replace("%A", day_names[pickup_date.weekday()])
+            if "%a" in result:
+                day_abbr = self.DAY_ABBR.get(lang, self.DAY_ABBR["en"])
+                result = result.replace("%a", day_abbr[pickup_date.weekday()])
+
+            # month is 1-indexed, list is 0-indexed
+            if "%B" in result:
+                month_names = self.MONTH_NAMES.get(lang, self.MONTH_NAMES["en"])
+                result = result.replace("%B", month_names[pickup_date.month - 1])
+            if "%b" in result:
+                month_abbr = self.MONTH_ABBR.get(lang, self.MONTH_ABBR["en"])
+                result = result.replace("%b", month_abbr[pickup_date.month - 1])
+
+            # Apply remaining strftime patterns
+            return pickup_date.strftime(result)
+
+        return pickup_date.strftime(fmt)
 
     @property
     def native_value(self) -> str | None:
@@ -191,20 +263,9 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
             days_until = self._get_days_until(pickup_date) if pickup_date else None
 
             if days_until is not None:
-                lang = self._get_language()
-                translations = self.DAY_TRANSLATIONS.get(lang, self.DAY_TRANSLATIONS["nl"])
-
-                attrs = {
+                return {
                     "days_until_pickup": days_until,
                 }
-
-                # Add translated day indicator for today/tomorrow
-                if days_until == 0:
-                    attrs["day"] = translations["today"]
-                elif days_until == 1:
-                    attrs["day"] = translations["tomorrow"]
-
-                return attrs
 
         return {}
 

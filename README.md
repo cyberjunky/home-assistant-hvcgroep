@@ -119,6 +119,42 @@ sensor:
 2. Manage all settings via **Settings** → **Devices & Services** → **HVC Groep** → **Configure**
 3. Disable unwanted sensors through entity settings
 
+### Date Format Options
+
+After adding the integration, click **Configure** to customize how dates are displayed:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| Default date format | Format for future dates | `%d-%m-%Y` |
+| Today format | Format when pickup is today | `Today %d-%m-%Y` |
+| Tomorrow format | Format when pickup is tomorrow | `Tomorrow %d-%m-%Y` |
+
+#### Format Codes
+
+Use Python [strftime format codes](https://strftime.org/):
+
+| Code | Meaning | Example |
+|------|---------|---------|
+| `%d` | Day (zero-padded) | 03 |
+| `%m` | Month (zero-padded) | 01 |
+| `%Y` | Year (4-digit) | 2026 |
+| `%A` | Full weekday name | Friday / Vrijdag |
+| `%a` | Abbreviated weekday | Fri / Vr |
+| `%B` | Full month name | January / januari |
+| `%b` | Abbreviated month | Jan / jan |
+
+> **Note:** Day and month names (`%A`, `%B`, `%a`, `%b`) are automatically localized based on your Home Assistant language setting.
+
+#### Examples
+
+| Format | Dutch HA | English HA |
+|--------|----------|------------|
+| `%d-%m-%Y` | 03-01-2026 | 03-01-2026 |
+| `%A %d-%m-%Y` | Vrijdag 03-01-2026 | Friday 03-01-2026 |
+| `%a %d %B` | Vr 03 januari | Fri 03 January |
+| `Vandaag %A` | Vandaag Vrijdag | Vandaag Friday |
+| `Tomorrow %d/%m` | Tomorrow 03/01 | Tomorrow 03/01 |
+
 ## Advanced Usage
 
 ### Automation Examples

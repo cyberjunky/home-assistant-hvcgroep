@@ -23,6 +23,24 @@
             "invalid_config": "Invalid configuration provided."
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Date Format Options",
+                "description": "Configure how dates are displayed. Use Python strftime format codes (e.g., %d-%m-%Y).",
+                "data": {
+                    "date_format_default": "Default date format",
+                    "date_format_today": "Today format",
+                    "date_format_tomorrow": "Tomorrow format"
+                },
+                "data_description": {
+                    "date_format_default": "Format for future dates (e.g., %d-%m-%Y)",
+                    "date_format_today": "Format when pickup is today (e.g., Today %d-%m-%Y)",
+                    "date_format_tomorrow": "Format when pickup is tomorrow (e.g., Tomorrow %d-%m-%Y)"
+                }
+            }
+        }
+    },
     "entity": {
         "sensor": {
             "gft": {

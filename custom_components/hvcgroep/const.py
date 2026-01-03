@@ -9,6 +9,16 @@ DOMAIN: Final = "hvcgroep"
 CONF_POSTAL_CODE: Final = "postal_code"
 CONF_HOUSE_NUMBER: Final = "house_number"
 
+# Date format configuration keys
+CONF_DATE_FORMAT_DEFAULT: Final = "date_format_default"
+CONF_DATE_FORMAT_TODAY: Final = "date_format_today"
+CONF_DATE_FORMAT_TOMORROW: Final = "date_format_tomorrow"
+
+# Default date formats
+DEFAULT_DATE_FORMAT: Final = "%d-%m-%Y"
+DEFAULT_DATE_FORMAT_TODAY: Final = "Today %d-%m-%Y"
+DEFAULT_DATE_FORMAT_TOMORROW: Final = "Tomorrow %d-%m-%Y"
+
 # API URLs
 BAGID_URL: Final = "https://apps.hvcgroep.nl/rest/adressen/{0}-{1}"
 WASTE_URL: Final = "https://apps.hvcgroep.nl/rest/adressen/{0}/afvalstromen"

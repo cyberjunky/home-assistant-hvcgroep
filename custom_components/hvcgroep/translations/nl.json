@@ -23,6 +23,24 @@
             "invalid_config": "Ongeldige configuratie opgegeven."
         }
     },
+    "options": {
+        "step": {
+            "init": {
+                "title": "Datumformaat opties",
+                "description": "Configureer hoe datums worden weergegeven. Gebruik Python strftime formaat codes (bijv. %d-%m-%Y).",
+                "data": {
+                    "date_format_default": "Standaard datumformaat",
+                    "date_format_today": "Vandaag formaat",
+                    "date_format_tomorrow": "Morgen formaat"
+                },
+                "data_description": {
+                    "date_format_default": "Formaat voor toekomstige datums (bijv. %d-%m-%Y)",
+                    "date_format_today": "Formaat wanneer ophaling vandaag is (bijv. Vandaag %d-%m-%Y)",
+                    "date_format_tomorrow": "Formaat wanneer ophaling morgen is (bijv. Morgen %d-%m-%Y)"
+                }
+            }
+        }
+    },
     "entity": {
         "sensor": {
             "gft": {
