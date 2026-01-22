@@ -20,8 +20,8 @@ DEFAULT_DATE_FORMAT_TODAY: Final = "Today %d-%m-%Y"
 DEFAULT_DATE_FORMAT_TOMORROW: Final = "Tomorrow %d-%m-%Y"
 
 # API URLs
-BAGID_URL: Final = "https://apps.hvcgroep.nl/rest/adressen/{0}-{1}"
-WASTE_URL: Final = "https://apps.hvcgroep.nl/rest/adressen/{0}/afvalstromen"
+BAGID_URL: Final = "https://inzamelkalender.hvcgroep.nl/rest/adressen/{0}-{1}"
+WASTE_URL: Final = "https://inzamelkalender.hvcgroep.nl/rest/adressen/{0}/afvalstromen"
 
 # Default scan interval in seconds (1 hour)
 DEFAULT_SCAN_INTERVAL: Final = 3600
