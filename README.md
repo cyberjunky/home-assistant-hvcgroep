@@ -205,7 +205,7 @@ automation:
             _De vuilniswagen komt eraan!_ 📦
 ```
 
-> **Note:** Replace `sensor.hvc_groep_1234ab_*` with your actual sensor entity IDs and `notify.mobile_app` with your notification service.
+> **Note:** Replace `sensor.hvc_groep_1234ab_*` with your actual sensor entity IDs and `telegram_bot.send_message` with your notification service.
 
 ## Troubleshooting
 
