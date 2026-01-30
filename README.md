@@ -162,32 +162,47 @@ Use Python [strftime format codes](https://strftime.org/):
 Get notified when garbage will be collected:
 
 ```yaml
-automation:
-  - alias: "Notification Garbage Tomorrow"
-    triggers:
-      - trigger: state
-        entity_id: sensor.hvc_groep_1234ab_pickup_tomorrow
-    conditions:
-      - condition: template
-        value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable', 'None'] }}"
-    actions:
-      - action: notify.mobile_app
-        data:
-          title: "Garbage Collection"
-          message: "Tomorrow: {{ trigger.to_state.state }}"
 
-  - alias: "Notification Garbage Today"
+automation:
+  - id: melding_afval_morgen
+    alias: "Melding Afval Morgen"
+    description: "Stuurt een Telegram bericht 's avonds voor afval dat morgen wordt opgehaald"
     triggers:
-      - trigger: state
-        entity_id: sensor.hvc_groep_1234ab_pickup_today
+      - trigger: time
+        at: "20:00:00"
     conditions:
       - condition: template
-        value_template: "{{ trigger.to_state.state not in ['unknown', 'unavailable', 'None'] }}"
+        value_template: "{{ states('sensor.hvc_groep_1234ab_pickup_tomorrow') not in ['unknown', 'unavailable', 'None', 'none', 'Geen', ''] }}"
     actions:
-      - action: notify.mobile_app
+      - action: telegram_bot.send_message
         data:
-          title: "Garbage Collection"
-          message: "Today: {{ trigger.to_state.state }}"
+          message: >
+            🗑️ *Afval Reminder*
+            
+            Morgen wordt dit opgehaald:
+            {{ states('sensor.hvc_groep_1234ab_pickup_tomorrow') }}
+            
+            _Vergeet de container niet buiten te zetten!_ 🚮
+
+  - id: melding_afval_vandaag
+    alias: "Melding Afval Vandaag"
+    description: "Stuurt een Telegram bericht 's ochtends voor afval dat vandaag wordt opgehaald"
+    triggers:
+      - trigger: time
+        at: "07:00:00"
+    conditions:
+      - condition: template
+        value_template: "{{ states('sensor.hvc_groep_1234ab_pickup_today') not in ['unknown', 'unavailable', 'None', 'none', 'Geen', ''] }}"
+    actions:
+      - action: telegram_bot.send_message
+        data:
+          message: >
+            🚛 *Afval Vandaag*
+            
+            Vandaag wordt dit opgehaald:
+            {{ states('sensor.hvc_groep_1234ab_pickup_today') }}
+            
+            _De vuilniswagen komt eraan!_ 📦
 ```
 
 > **Note:** Replace `sensor.hvc_groep_1234ab_*` with your actual sensor entity IDs and `notify.mobile_app` with your notification service.
