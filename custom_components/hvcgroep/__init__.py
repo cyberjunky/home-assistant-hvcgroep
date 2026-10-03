@@ -67,6 +67,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up HVC Groep from a config entry."""
     coordinator = HVCGroepDataUpdateCoordinator(
         hass,
+        entry,
         postal_code=entry.data[CONF_POSTAL_CODE],
         house_number=entry.data[CONF_HOUSE_NUMBER],
     )

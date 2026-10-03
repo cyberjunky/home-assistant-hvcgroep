@@ -1,7 +1,7 @@
 """Constants for the HVC Groep integration."""
 from __future__ import annotations
 
-from typing import Final
+from typing import Any, Final
 
 DOMAIN: Final = "hvcgroep"
 
@@ -27,7 +27,7 @@ WASTE_URL: Final = "https://inzamelkalender.hvcgroep.nl/rest/adressen/{0}/afvals
 DEFAULT_SCAN_INTERVAL: Final = 3600
 
 # Garbage type definitions with HVC API IDs
-GARBAGE_TYPES: Final = {
+GARBAGE_TYPES: Final[dict[str, dict[str, Any]]] = {
     "gft": {
         "id": 5,
         "icon": "mdi:food-apple-outline",

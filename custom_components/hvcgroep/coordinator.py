@@ -1,15 +1,17 @@
 """Data update coordinator for HVC Groep integration."""
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
-import async_timeout
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.util import dt as dt_util
 
 from .const import (
     BAGID_URL,
@@ -28,6 +30,7 @@ class HVCGroepDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     def __init__(
         self,
         hass: HomeAssistant,
+        config_entry: ConfigEntry,
         postal_code: str,
         house_number: str,
     ) -> None:
@@ -35,6 +38,7 @@ class HVCGroepDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=config_entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=DEFAULT_SCAN_INTERVAL),
         )
@@ -59,13 +63,13 @@ class HVCGroepDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.debug("Fetching BAG ID from: %s", url)
 
         try:
-            async with async_timeout.timeout(10):
+            async with asyncio.timeout(10):
                 response = await self._session.get(url)
                 response.raise_for_status()
                 json_data = await response.json()
 
             if json_data and len(json_data) > 0:
-                bag_id = json_data[0].get("bagId")
+                bag_id: str | None = json_data[0].get("bagId")
                 _LOGGER.debug("Found BAG ID: %s", bag_id)
                 return bag_id
 
@@ -89,7 +93,7 @@ class HVCGroepDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         _LOGGER.debug("Fetching waste schedule from: %s", url)
 
         try:
-            async with async_timeout.timeout(10):
+            async with asyncio.timeout(10):
                 response = await self._session.get(url)
                 response.raise_for_status()
                 json_data = await response.json()
@@ -106,7 +110,7 @@ class HVCGroepDataUpdateCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             "pickup_tomorrow": [],
         }
 
-        today = datetime.today().date()
+        today = dt_util.now().date()
         tomorrow = today + timedelta(days=1)
 
         for item in json_data:
@@ -159,7 +163,7 @@ async def validate_connection(
     url = BAGID_URL.format(postal_code, house_number)
 
     try:
-        async with async_timeout.timeout(10):
+        async with asyncio.timeout(10):
             response = await session.get(url)
             response.raise_for_status()
             json_data = await response.json()

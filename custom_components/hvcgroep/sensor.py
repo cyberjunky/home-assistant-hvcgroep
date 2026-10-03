@@ -13,6 +13,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import (
     CONF_DATE_FORMAT_DEFAULT,
@@ -155,7 +156,8 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
 
     def _get_date_format(self, format_key: str, default: str) -> str:
         """Get date format from options or return default."""
-        return self._entry.options.get(format_key, default)
+        fmt: str = self._entry.options.get(format_key, default)
+        return fmt
 
     def _get_language(self) -> str:
         """Get language code from HA language setting."""
@@ -184,7 +186,7 @@ class HVCGroepGarbageSensor(HVCGroepBaseSensor):
         if pickup_date is None:
             return None
 
-        today = date.today()
+        today = dt_util.now().date()
         return (pickup_date - today).days
 
     def _format_date(self, pickup_date: date, days_until: int) -> str:

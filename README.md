@@ -55,6 +55,7 @@ You can configure multiple addresses by adding the integration multiple times th
 
 ## Requirements
 
+- Home Assistant 2026.3.0 or newer (Python 3.14)
 - Are you serviced by HVC Groep?
 - Do you have a valid postal code and house number?
 
@@ -249,7 +250,7 @@ Then perform any steps to reproduce the issue and disable debug logging again. I
 Quick-start (from project root):
 
 ```bash
-python3 -m venv .venv
+python3.14 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 pip install -r requirements_lint.txt
